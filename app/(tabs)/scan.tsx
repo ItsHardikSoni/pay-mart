@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, TextInput, Alert, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, BarCodeScanningResult, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,31 +15,54 @@ export default function ScanScreen() {
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [sound, setSound] = useState<Audio.Sound>();
+  const lineAnimation = useRef(new Animated.Value(0)).current;
 
   async function playSound() {
-    // console.log('Loading Sound');
     const { sound } = await Audio.Sound.createAsync( require('../../assets/sounds/beep.mp3'));
     setSound(sound);
-
-    // console.log('Playing Sound');
     await sound.playAsync();
   }
 
   useEffect(() => {
     return sound
       ? () => {
-          // console.log('Unloading Sound');
           sound.unloadAsync();
         }
       : undefined;
   }, [sound]);
 
+  useEffect(() => {
+    if (showCamera) {
+      startLineAnimation();
+    }
+  }, [showCamera]);
 
-  const handleBarCodeScanned = ({ data }: BarCodeScanningResult) => {
-    setScanned(true);
-    setBarcode(data);
-    setShowCamera(false);
-    playSound();
+  const startLineAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(lineAnimation, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(lineAnimation, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+  };
+
+
+  const handleBarCodeScanned = ({ type, data }: BarCodeScanningResult) => {
+    const allowedBarCodeTypes = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code39', 'code128'];
+    if (allowedBarCodeTypes.includes(type)) {
+        setScanned(true);
+        setBarcode(data);
+        setShowCamera(false);
+        playSound();
+    }
   };
   
   const handleManualBarcodeSearch = () => {
@@ -118,7 +141,28 @@ export default function ScanScreen() {
           <CameraView
             style={StyleSheet.absoluteFillObject}
             onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-          />
+            barcodeScannerSettings={{
+                barCodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code39', 'code128'],
+            }}
+          >
+            <View style={styles.cameraOverlay}>
+                <Animated.View
+                    style={[
+                        styles.scanLine,
+                        {
+                        transform: [
+                            {
+                            translateY: lineAnimation.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 200], // Adjust the range based on your scanner area
+                            }),
+                            },
+                        ],
+                        },
+                    ]}
+                />
+            </View>
+          </CameraView>
           <TouchableOpacity
             style={{
               position: 'absolute',
@@ -219,5 +263,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 8,
+  },
+  cameraOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanLine: {
+    width: '80%',
+    height: 2,
+    backgroundColor: 'red',
+    position: 'absolute',
   },
 });
