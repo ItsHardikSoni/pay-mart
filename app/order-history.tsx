@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const orders = [
   {
@@ -18,6 +19,8 @@ const orders = [
 ];
 
 const OrderHistory = () => {
+  const router = useRouter();
+
   const renderItem = ({ item }) => (
     <View style={styles.orderContainer}>
       <View style={styles.orderHeader}>
@@ -30,11 +33,18 @@ const OrderHistory = () => {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={orders}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-      />
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color="black" />
+        <Text style={styles.pageTitle}>Order History</Text>
+      </TouchableOpacity>
+      
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <FlatList
+          data={orders}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+        />
+      </ScrollView>
     </View>
   );
 };
@@ -44,6 +54,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
     padding: 20
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginLeft: 15,
   },
   orderContainer: {
     backgroundColor: 'white',

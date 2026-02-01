@@ -22,12 +22,11 @@ export default function RootLayout() {
           <Stack.Screen 
             name="search" 
             options={{ 
-              headerShown: true, 
-              headerTitle: 'Search Products',
+              headerShown: false,
             }} 
           />
-          <Stack.Screen name="help-and-support" options={{ headerShown: true, headerTitle: 'Help & Support' }} />
-          <Stack.Screen name="order-history" options={{ headerShown: true, headerTitle: 'Order History' }} />
+          <Stack.Screen name="help-and-support" options={{ headerShown: false }} />
+          <Stack.Screen name="order-history" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
