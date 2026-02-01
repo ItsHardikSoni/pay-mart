@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, TextInput, Alert, ScrollView, Animated } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, TextInput, Alert, ScrollView, Animated, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, BarCodeScanningResult, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [sound, setSound] = useState<Audio.Sound>();
   const lineAnimation = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
 
   async function playSound() {
     const { sound } = await Audio.Sound.createAsync( require('../../assets/sounds/beep.mp3'));
@@ -90,96 +91,104 @@ export default function ScanScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
-      >
-        <View style={styles.scanContainer}>
-          <Ionicons name="camera-outline" size={80} color="#6c63ff" />
-          <Text style={styles.readyToScanText}>Ready to Scan</Text>
-          {barcode && (
-            <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold', color: '#6c63ff' }}>
-              Scanned Barcode: {barcode}
-            </Text>
-          )}
+    <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+        <View style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
+        <ScrollView
+            ref={scrollViewRef}
+            style={styles.container}
+            contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+        >
+            <View style={styles.scanContainer}>
+            <Ionicons name="camera-outline" size={80} color="#6c63ff" />
+            <Text style={styles.readyToScanText}>Ready to Scan</Text>
+            {barcode && (
+                <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold', color: '#6c63ff' }}>
+                Scanned Barcode: {barcode}
+                </Text>
+            )}
 
-          <Text style={styles.promptText}>Point your camera at the product barcode</Text>
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={() => {
-              setScanned(false);
-              setShowCamera(true);
-            }}
-          >
-            <Ionicons name="scan" size={20} color="white" />
-            <Text style={styles.startButtonText}>Scan Products</Text>
-          </TouchableOpacity>
-
-
-        </View>
-
-        <View style={styles.manualContainer}>
-          <Text style={styles.manualEntryTitle}>Manual Barcode Entry</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter barcode number"
-              value={manualBarcode}
-              onChangeText={setManualBarcode}
-            />
-            <TouchableOpacity style={styles.searchButton} onPress={handleManualBarcodeSearch}>
-              <Ionicons name="search" size={24} color="white" />
+            <Text style={styles.promptText}>Point your camera at the product barcode</Text>
+            <TouchableOpacity
+                style={styles.startButton}
+                onPress={() => {
+                setScanned(false);
+                setShowCamera(true);
+                }}
+            >
+                <Ionicons name="scan" size={20} color="white" />
+                <Text style={styles.startButtonText}>Scan Products</Text>
             </TouchableOpacity>
-          </View>
-          <Text style={styles.inputCaption}>Use this if the barcode is damaged or unreadable</Text>
-        </View>
-      </ScrollView>
-      
-      {showCamera && (
-        <>
-          <CameraView
-            style={StyleSheet.absoluteFillObject}
-            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-            barcodeScannerSettings={{
-                barCodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code39', 'code128'],
-            }}
-          >
-            <View style={styles.cameraOverlay}>
-                <Animated.View
-                    style={[
-                        styles.scanLine,
-                        {
-                        transform: [
-                            {
-                            translateY: lineAnimation.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, 200], // Adjust the range based on your scanner area
-                            }),
-                            },
-                        ],
-                        },
-                    ]}
-                />
+
+
             </View>
-          </CameraView>
-          <TouchableOpacity
-            style={{
-              position: 'absolute',
-              top: insets.top + 10,
-              left: 20,
-              zIndex: 10,
-            }}
-            onPress={() => {
-              setShowCamera(false);
-              setScanned(false);
-            }}
-          >
-            <Ionicons name="arrow-back" size={28} color="white" />
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
+
+            <View style={styles.manualContainer}>
+            <Text style={styles.manualEntryTitle}>Manual Barcode Entry</Text>
+            <View style={styles.inputContainer}>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Enter barcode number"
+                    value={manualBarcode}
+                    onChangeText={setManualBarcode}
+                    keyboardType="numeric"
+                    onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                />
+                <TouchableOpacity style={styles.searchButton} onPress={handleManualBarcodeSearch}>
+                <Ionicons name="search" size={24} color="white" />
+                </TouchableOpacity>
+            </View>
+            <Text style={styles.inputCaption}>Use this if the barcode is damaged or unreadable</Text>
+            </View>
+        </ScrollView>
+        
+        {showCamera && (
+            <>
+            <CameraView
+                style={StyleSheet.absoluteFillObject}
+                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                barcodeScannerSettings={{
+                    barCodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code39', 'code128'],
+                }}
+            >
+                <View style={styles.cameraOverlay}>
+                    <Animated.View
+                        style={[
+                            styles.scanLine,
+                            {
+                            transform: [
+                                {
+                                translateY: lineAnimation.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0, 200], // Adjust the range based on your scanner area
+                                }),
+                                },
+                            ],
+                            },
+                        ]}
+                    />
+                </View>
+            </CameraView>
+            <TouchableOpacity
+                style={{
+                position: 'absolute',
+                top: insets.top + 10,
+                left: 20,
+                zIndex: 10,
+                }}
+                onPress={() => {
+                setShowCamera(false);
+                setScanned(false);
+                }}
+            >
+                <Ionicons name="arrow-back" size={28} color="white" />
+            </TouchableOpacity>
+            </>
+        )}
+        </View>
+    </KeyboardAvoidingView>
   );
 }
 
