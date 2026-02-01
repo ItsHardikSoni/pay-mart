@@ -19,7 +19,7 @@ export default function RootLayout() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 3000); // Splash screen timeout
+    }, 5000); // Splash screen timeout
 
     return () => clearTimeout(timer);
   }, []);
