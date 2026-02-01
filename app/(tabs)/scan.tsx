@@ -2,31 +2,46 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Camera, BarCodeScannedEvent } from 'expo-camera';
+import { CameraView, BarCodeScanningResult, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ScanScreen() {
+  const [showCamera, setShowCamera] = useState(false);
+  const [barcode, setBarcode] = useState<string | null>(null);
+  const [manualBarcode, setManualBarcode] = useState('');
+
   const insets = useSafeAreaInsets();
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
 
-  const handleBarCodeScanned = ({ type, data }: BarCodeScannedEvent) => {
+  const handleBarCodeScanned = ({ data }: BarCodeScanningResult) => {
     setScanned(true);
-    Alert.alert(`Bar code with type ${type} and data ${data} has been scanned!`);
+    setBarcode(data);
+    setShowCamera(false);
+  };
+  
+  const handleManualBarcodeSearch = () => {
+    if (manualBarcode.trim() === '') {
+      Alert.alert('Empty Barcode', 'Please enter a barcode number.');
+      return;
+    }
+    setBarcode(manualBarcode);
+    setManualBarcode('');
+    Alert.alert('Barcode Entered', `You entered: ${manualBarcode}`);
   };
 
-  if (hasPermission === null) {
-    return <Text>Requesting for camera permission</Text>;
-  }
-  if (hasPermission === false) {
-    return <Text>No access to camera</Text>;
+  if (!permission) return null;
+
+  if (!permission.granted) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Camera permission required</Text>
+        <TouchableOpacity onPress={requestPermission}>
+          <Text style={{ color: '#6c63ff', marginTop: 10 }}>Grant Permission</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   return (
@@ -38,11 +53,25 @@ export default function ScanScreen() {
         <View style={styles.scanContainer}>
           <Ionicons name="camera-outline" size={80} color="#6c63ff" />
           <Text style={styles.readyToScanText}>Ready to Scan</Text>
+          {barcode && (
+            <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold', color: '#6c63ff' }}>
+              Scanned Barcode: {barcode}
+            </Text>
+          )}
+
           <Text style={styles.promptText}>Point your camera at the product barcode</Text>
-          <TouchableOpacity style={styles.startButton}>
-            <Ionicons name="camera" size={20} color="white" />
-            <Text style={styles.startButtonText}>Start Camera</Text>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={() => {
+              setScanned(false);
+              setShowCamera(true);
+            }}
+          >
+            <Ionicons name="scan" size={20} color="white" />
+            <Text style={styles.startButtonText}>Scan Products</Text>
           </TouchableOpacity>
+
+
         </View>
 
         <View style={styles.manualContainer}>
@@ -51,14 +80,39 @@ export default function ScanScreen() {
             <TextInput
               style={styles.input}
               placeholder="Enter barcode number"
+              value={manualBarcode}
+              onChangeText={setManualBarcode}
             />
-            <TouchableOpacity style={styles.searchButton}>
+            <TouchableOpacity style={styles.searchButton} onPress={handleManualBarcodeSearch}>
               <Ionicons name="search" size={24} color="white" />
             </TouchableOpacity>
           </View>
           <Text style={styles.inputCaption}>Use this if the barcode is damaged or unreadable</Text>
         </View>
       </ScrollView>
+      
+      {showCamera && (
+        <>
+          <CameraView
+            style={StyleSheet.absoluteFillObject}
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          />
+          <TouchableOpacity
+            style={{
+              position: 'absolute',
+              top: insets.top + 10,
+              left: 20,
+              zIndex: 10,
+            }}
+            onPress={() => {
+              setShowCamera(false);
+              setScanned(false);
+            }}
+          >
+            <Ionicons name="arrow-back" size={28} color="white" />
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 }

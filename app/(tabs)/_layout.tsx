@@ -57,7 +57,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="scan"
         options={{
           title: 'Scan',
           tabBarIcon: ({ color }) => <Ionicons size={28} name="scan" color={color} />,
