@@ -1,16 +1,19 @@
 
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Modal, TextInput, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Modal, TextInput, TouchableWithoutFeedback, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
+  const [image, setImage] = useState<string | null>(null);
   const [name, setName] = useState('Not set');
   const [phone, setPhone] = useState('Not set');
+  const [imageOptionsVisible, setImageOptionsVisible] = useState(false);
+
 
   const [tempName, setTempName] = useState(name);
   const [tempPhone, setTempPhone] = useState(phone);
@@ -21,21 +24,89 @@ export default function AccountScreen() {
       setModalVisible(false);
   }
 
+  const handleImagePress = () => {
+    setImageOptionsVisible(true);
+  };
+
+  const requestCameraPermission = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'You need to grant camera permissions to take a photo.');
+      return false;
+    }
+    return true;
+  };
+
+  const requestGalleryPermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'You need to grant gallery permissions to choose an image.');
+      return false;
+    }
+    return true;
+  };
+
+  const takePhoto = async () => {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) return;
+
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+    setImageOptionsVisible(false);
+  };
+
+  const chooseFromGallery = async () => {
+    const hasPermission = await requestGalleryPermission();
+    if (!hasPermission) return;
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+    setImageOptionsVisible(false);
+  };
+
+  const removePhoto = () => {
+    setImage(null);
+    setImageOptionsVisible(false);
+  };
+
+
   return (
     <View style={{flex: 1, backgroundColor: '#f3f4f6'}}>
         <ScrollView 
             style={styles.container}
             contentContainerStyle={{ paddingBottom: insets.bottom }}
         >
-        <LinearGradient
-            colors={['#8e44ad', '#6c63ff']}
-            style={[styles.header, { paddingTop: insets.top + 20 }]}
+        <View
+            style={[styles.header]}
         >
             <View style={styles.headerContent}>
-            <Ionicons name="person-circle-outline" size={80} color="white" />
-            <Text style={styles.userName}>User</Text>
+            <TouchableOpacity onPress={handleImagePress} style={styles.profileImageContainer}>
+              {image ? (
+                <Image source={{ uri: image }} style={styles.profileImage} />
+              ) : (
+                <Ionicons name="person-circle-outline" size={80} color="white" />
+              )}
+               <View style={styles.editIconContainer}>
+                <Ionicons name="create-outline" size={16} color="#6c63ff" />
+              </View>
+            </TouchableOpacity>
             </View>
-        </LinearGradient>
+        </View>
 
         <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -145,6 +216,39 @@ export default function AccountScreen() {
                 </View>
             </TouchableWithoutFeedback>
         </Modal>
+        <Modal
+        animationType="slide"
+        transparent={true}
+        visible={imageOptionsVisible}
+        onRequestClose={() => setImageOptionsVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setImageOptionsVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.imageOptionsContainer}>
+              <TouchableOpacity style={styles.imageOption} onPress={takePhoto}>
+                <Ionicons name="camera-outline" size={24} color="#6c63ff" />
+                <Text style={styles.imageOptionText}>Take Photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.imageOption} onPress={chooseFromGallery}>
+                <Ionicons name="image-outline" size={24} color="#6c63ff" />
+                <Text style={styles.imageOptionText}>Choose from Gallery</Text>
+              </TouchableOpacity>
+              {image && (
+                <TouchableOpacity style={styles.imageOption} onPress={removePhoto}>
+                  <Ionicons name="trash-outline" size={24} color="red" />
+                  <Text style={[styles.imageOptionText, { color: 'red' }]}>Remove Photo</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.imageOption, styles.cancelOption]}
+                onPress={() => setImageOptionsVisible(false)}
+              >
+                <Text style={styles.cancelOptionText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -155,21 +259,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
   },
   header: {
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    paddingHorizontal: 20,
-    paddingBottom: 60,
-    marginBottom: -40, 
+    backgroundColor: '#6c63ff',
+    padding: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 20, 
   },
   headerContent: {
-    flexDirection: 'row',
     alignItems: 'center',
   },
-  userName: {
-    color: 'white',
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginLeft: 16,
+  profileImageContainer: {
+    position: 'relative',
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 4,
   },
   card: {
     backgroundColor: 'white',
@@ -328,5 +443,42 @@ const styles = StyleSheet.create({
       color: 'white',
       fontWeight: 'bold',
       fontSize: 16,
-  }
+  },
+  imageOptionsContainer: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 10,
+    alignItems: 'stretch',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    position: 'absolute',
+    bottom: 40,
+    left: '5%',
+  },
+  imageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  imageOptionText: {
+    marginLeft: 15,
+    fontSize: 18,
+    color: '#6c63ff',
+  },
+  cancelOption: {
+    borderBottomWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelOptionText: {
+    color: 'red',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
 });

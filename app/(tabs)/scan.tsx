@@ -17,18 +17,18 @@ export default function ScanScreen() {
   const [sound, setSound] = useState<Audio.Sound>();
 
   async function playSound() {
-    console.log('Loading Sound');
+    // console.log('Loading Sound');
     const { sound } = await Audio.Sound.createAsync( require('../../assets/sounds/beep.mp3'));
     setSound(sound);
 
-    console.log('Playing Sound');
+    // console.log('Playing Sound');
     await sound.playAsync();
   }
 
   useEffect(() => {
     return sound
       ? () => {
-          console.log('Unloading Sound');
+          // console.log('Unloading Sound');
           sound.unloadAsync();
         }
       : undefined;
