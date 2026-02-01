@@ -4,6 +4,7 @@ import { StyleSheet, View, Text, TouchableOpacity, TextInput, Alert, ScrollView 
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, BarCodeScanningResult, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Audio } from 'expo-av';
 
 export default function ScanScreen() {
   const [showCamera, setShowCamera] = useState(false);
@@ -13,12 +14,32 @@ export default function ScanScreen() {
   const insets = useSafeAreaInsets();
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  const [sound, setSound] = useState<Audio.Sound>();
+
+  async function playSound() {
+    console.log('Loading Sound');
+    const { sound } = await Audio.Sound.createAsync( require('../../assets/sounds/beep.mp3'));
+    setSound(sound);
+
+    console.log('Playing Sound');
+    await sound.playAsync();
+  }
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          console.log('Unloading Sound');
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
 
 
   const handleBarCodeScanned = ({ data }: BarCodeScanningResult) => {
     setScanned(true);
     setBarcode(data);
     setShowCamera(false);
+    playSound();
   };
   
   const handleManualBarcodeSearch = () => {
@@ -29,6 +50,7 @@ export default function ScanScreen() {
     setBarcode(manualBarcode);
     setManualBarcode('');
     Alert.alert('Barcode Entered', `You entered: ${manualBarcode}`);
+    playSound();
   };
 
   if (!permission) return null;
