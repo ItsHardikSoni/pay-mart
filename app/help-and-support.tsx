@@ -17,7 +17,7 @@ interface Faq {
 
 const faqs: Faq[] = [
   { question: 'How do I scan products?', answer: 'To scan a product, go to the Scan screen and point your camera at the barcode until it\'s recognized.' },
-  { question: 'What if the barcode won’t scan?', answer: 'If a barcode won’t scan, you can manually enter the barcode number on the Scan screen.' },
+  { question: 'What if the barcode won\'t scan?', answer: 'If a barcode won\'t scan, you can manually enter the barcode number on the Scan screen.' },
   { question: 'What payment methods are accepted?', answer: 'We accept all major credit cards, as well as Google Pay and Apple Pay.' },
   { question: 'How do I view my order history?', answer: 'You can view your past orders by navigating to the Account screen and selecting "Order History".' },
   { question: 'Can I edit my profile information?', answer: 'Yes, you can edit your profile information in the Account screen by tapping the "Edit" button.' },
@@ -61,12 +61,6 @@ export default function HelpAndSupportScreen() {
 
   return (
     <ScrollView style={styles.container}>
-        <View style={styles.header}>
-            <TouchableOpacity>
-                <Ionicons name="close" size={24} color="black" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Help & Support</Text>
-      </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Frequently Asked Questions</Text>
@@ -167,8 +161,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    margin: 16,
   },
   cardTitle: {
     fontSize: 18,

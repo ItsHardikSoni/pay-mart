@@ -1,153 +1,74 @@
-
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, FlatList } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface Order {
-    id: string;
-    date: string;
-    total: number;
-}
+const orders = [
+  {
+    id: '1',
+    date: '2023-10-27',
+    items: ['Product 1, Product 2'],
+    total: 50.0,
+  },
+  {
+    id: '2',
+    date: '2023-10-25',
+    items: ['Product 3'],
+    total: 25.0,
+  },
+];
 
-export default function OrderHistoryScreen() {
-  const insets = useSafeAreaInsets();
-  const [orders, setOrders] = useState<Order[]>([]);
-
-  const renderItem = ({ item }: { item: Order }) => (
-    <View style={styles.itemContainer}>
-        <Text style={styles.itemHeader}>Order #{item.id}</Text>
-        <Text style={styles.itemDate}>{item.date}</Text>
-        <Text style={styles.itemTotal}>Total: ${item.total.toFixed(2)}</Text>
-        <TouchableOpacity style={styles.detailsButton}>
-            <Text style={styles.detailsButtonText}>View Details</Text>
-        </TouchableOpacity>
+const OrderHistory = () => {
+  const renderItem = ({ item }) => (
+    <View style={styles.orderContainer}>
+      <View style={styles.orderHeader}>
+        <Text style={styles.orderDate}>{item.date}</Text>
+        <Text style={styles.orderTotal}>${item.total.toFixed(2)}</Text>
+      </View>
+      <Text style={styles.orderItems}>{item.items.join(', ')}</Text>
     </View>
   );
 
   return (
-    <View style={[styles.container, {paddingTop: insets.top, paddingBottom: insets.bottom}]}>
-      <View style={styles.header}>
-        <TouchableOpacity>
-          <Ionicons name="close" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order History</Text>
-        <View style={styles.ordersBadge}>
-          <Text style={styles.ordersBadgeText}>{orders.length} orders</Text>
-        </View>
-      </View>
-
-      {orders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="bag-handle-outline" size={100} color="#ccc" />
-          <Text style={styles.emptyTitle}>No orders yet</Text>
-          <Text style={styles.emptySubtitle}>Start shopping to see your orders here</Text>
-          <TouchableOpacity style={styles.startButton}>
-            <Text style={styles.startButtonText}>Start Shopping</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-            data={orders}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{paddingHorizontal: 16}}
-        />
-      )}
+    <View style={styles.container}>
+      <FlatList
+        data={orders}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+      />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
+    padding: 20
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  ordersBadge: {
-    backgroundColor: '#6c63ff',
-    borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
-  ordersBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
-  startButton: {
-    backgroundColor: '#6c63ff',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginTop: 24,
-  },
-  startButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  itemContainer: {
+  orderContainer: {
     backgroundColor: 'white',
-    borderRadius: 10,
     padding: 15,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 10,
+    marginBottom: 15,
+    elevation: 2,
   },
-  itemHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  itemDate: {
-    fontSize: 14,
-    color: 'gray',
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 10,
   },
-  itemTotal: {
+  orderDate: {
     fontSize: 16,
     fontWeight: 'bold',
-    textAlign: 'right',
   },
-  detailsButton: {
-      marginTop: 10,
-      alignSelf: 'flex-end',
+  orderTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  detailsButtonText: {
-      color: '#6c63ff',
-      fontSize: 14,
-      fontWeight: 'bold',
-  }
+  orderItems: {
+    fontSize: 14,
+    color: '#666',
+  },
 });
+
+export default OrderHistory;

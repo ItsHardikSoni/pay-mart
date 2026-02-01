@@ -30,56 +30,50 @@ export default function ScanScreen() {
   }
 
   return (
-    <View style={{flex: 1, backgroundColor: '#f0f2f5'}}>
-        <ScrollView 
-            style={styles.container}
-            contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
-        >
-            <View style={styles.header}>
-                <TouchableOpacity>
-                    <Ionicons name="close" size={24} color="black" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Scan Product</Text>
-        </View>
+    <View style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+      >
         <View style={styles.scanContainer}>
-            <Ionicons name="camera-outline" size={80} color="#6c63ff" />
-            <Text style={styles.readyToScanText}>Ready to Scan</Text>
-            <Text style={styles.promptText}>Point your camera at the product barcode</Text>
-            <TouchableOpacity style={styles.startButton}>
+          <Ionicons name="camera-outline" size={80} color="#6c63ff" />
+          <Text style={styles.readyToScanText}>Ready to Scan</Text>
+          <Text style={styles.promptText}>Point your camera at the product barcode</Text>
+          <TouchableOpacity style={styles.startButton}>
             <Ionicons name="camera" size={20} color="white" />
             <Text style={styles.startButtonText}>Start Camera</Text>
-            </TouchableOpacity>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.manualContainer}>
-            <Text style={styles.manualEntryTitle}>Manual Barcode Entry</Text>
-            <View style={styles.inputContainer}>
+          <Text style={styles.manualEntryTitle}>Manual Barcode Entry</Text>
+          <View style={styles.inputContainer}>
             <TextInput
-                style={styles.input}
-                placeholder="Enter barcode number"
+              style={styles.input}
+              placeholder="Enter barcode number"
             />
             <TouchableOpacity style={styles.searchButton}>
-                <Ionicons name="search" size={24} color="white" />
+              <Ionicons name="search" size={24} color="white" />
             </TouchableOpacity>
-            </View>
-            <Text style={styles.inputCaption}>Use this if the barcode is damaged or unreadable</Text>
+          </View>
+          <Text style={styles.inputCaption}>Use this if the barcode is damaged or unreadable</Text>
         </View>
-        </ScrollView>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-      },
-      headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginLeft: 16,
-      },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginLeft: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f0f2f5',

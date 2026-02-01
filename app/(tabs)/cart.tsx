@@ -31,9 +31,6 @@ export default function CartScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity>
-          <Ionicons name="close" size={24} color="black" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>My Cart</Text>
         <View style={styles.itemsBadge}>
           <Text style={styles.itemsBadgeText}>{cartItems.length} items</Text>

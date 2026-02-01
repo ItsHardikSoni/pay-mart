@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 
 export default function HomeScreen() {
   return (
@@ -47,13 +47,15 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.optionButton}>
-        <Ionicons name="search" size={24} color="#6c63ff" />
-        <View>
-          <Text style={styles.optionButtonText}>Search Products</Text>
-          <Text style={styles.optionButtonSubText}>Browse and add manually</Text>
-        </View>
-      </TouchableOpacity>
+      <Link href="/search" asChild>
+        <TouchableOpacity style={styles.optionButton}>
+          <Ionicons name="search" size={24} color="#6c63ff" />
+          <View>
+            <Text style={styles.optionButtonText}>Search Products</Text>
+            <Text style={styles.optionButtonSubText}>Browse and add manually</Text>
+          </View>
+        </TouchableOpacity>
+      </Link>
 
       <View style={styles.howItWorksContainer}>
         <Text style={styles.howItWorksTitle}>How it works</Text>
@@ -87,7 +89,7 @@ const styles = StyleSheet.create({
   },
   scanAndPayContainer: {
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: 10,
     backgroundColor: 'orange',
     borderRadius: 15,
     padding: 15,
