@@ -10,6 +10,7 @@ export default function ScanScreen() {
   const [showCamera, setShowCamera] = useState(false);
   const [barcode, setBarcode] = useState<string | null>(null);
   const [manualBarcode, setManualBarcode] = useState('');
+  const [isFlashOn, setIsFlashOn] = useState(false);
 
   const insets = useSafeAreaInsets();
   const [scanned, setScanned] = useState(false);
@@ -19,7 +20,7 @@ export default function ScanScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   async function playSound() {
-    const { sound } = await Audio.Sound.createAsync( require('../../assets/sounds/beep.mp3'));
+    const { sound } = await Audio.Sound.createAsync(require('../../assets/sounds/beep.mp3'));
     setSound(sound);
     await sound.playAsync();
   }
@@ -27,8 +28,8 @@ export default function ScanScreen() {
   useEffect(() => {
     return sound
       ? () => {
-          sound.unloadAsync();
-        }
+        sound.unloadAsync();
+      }
       : undefined;
   }, [sound]);
 
@@ -55,17 +56,25 @@ export default function ScanScreen() {
     ).start();
   };
 
+  const SUPPORTED_TYPES = [
+    'ean13',
+    'ean8',
+    'upc_a',
+    'upc_e',
+    'code39',
+    'code128',
+  ];  
 
   const handleBarCodeScanned = ({ type, data }: BarCodeScanningResult) => {
-    const allowedBarCodeTypes = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code39', 'code128'];
-    if (allowedBarCodeTypes.includes(type)) {
-        setScanned(true);
-        setBarcode(data);
-        setShowCamera(false);
-        playSound();
+    if (!SUPPORTED_TYPES.includes(type)) {
+      return; // ignore unsupported barcode
     }
+    setScanned(true);
+    setBarcode(data);
+    setShowCamera(false);
+    playSound();
   };
-  
+
   const handleManualBarcodeSearch = () => {
     if (manualBarcode.trim() === '') {
       Alert.alert('Empty Barcode', 'Please enter a barcode number.');
@@ -75,6 +84,10 @@ export default function ScanScreen() {
     setManualBarcode('');
     Alert.alert('Barcode Entered', `You entered: ${manualBarcode}`);
     playSound();
+  };
+
+  const toggleFlash = () => {
+    setIsFlashOn(!isFlashOn);
   };
 
   if (!permission) return null;
@@ -92,102 +105,107 @@ export default function ScanScreen() {
 
   return (
     <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-        <View style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
+      <View style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
         <ScrollView
-            ref={scrollViewRef}
-            style={styles.container}
-            contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+          ref={scrollViewRef}
+          style={styles.container}
+          contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
         >
-            <View style={styles.scanContainer}>
+          <View style={styles.scanContainer}>
             <Ionicons name="camera-outline" size={80} color="#6c63ff" />
             <Text style={styles.readyToScanText}>Ready to Scan</Text>
             {barcode && (
-                <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold', color: '#6c63ff' }}>
+              <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold', color: '#6c63ff' }}>
                 Scanned Barcode: {barcode}
-                </Text>
+              </Text>
             )}
 
             <Text style={styles.promptText}>Point your camera at the product barcode</Text>
             <TouchableOpacity
-                style={styles.startButton}
-                onPress={() => {
+              style={styles.startButton}
+              onPress={() => {
                 setScanned(false);
                 setShowCamera(true);
-                }}
+              }}
             >
-                <Ionicons name="scan" size={20} color="white" />
-                <Text style={styles.startButtonText}>Scan Products</Text>
+              <Ionicons name="scan" size={20} color="white" />
+              <Text style={styles.startButtonText}>Scan Products</Text>
             </TouchableOpacity>
 
 
-            </View>
+          </View>
 
-            <View style={styles.manualContainer}>
+          <View style={styles.manualContainer}>
             <Text style={styles.manualEntryTitle}>Manual Barcode Entry</Text>
             <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter barcode number"
-                    value={manualBarcode}
-                    onChangeText={setManualBarcode}
-                    keyboardType="numeric"
-                    onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-                />
-                <TouchableOpacity style={styles.searchButton} onPress={handleManualBarcodeSearch}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter barcode number"
+                value={manualBarcode}
+                onChangeText={setManualBarcode}
+                keyboardType="numeric"
+                onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+              />
+              <TouchableOpacity style={styles.searchButton} onPress={handleManualBarcodeSearch}>
                 <Ionicons name="search" size={24} color="white" />
-                </TouchableOpacity>
+              </TouchableOpacity>
             </View>
             <Text style={styles.inputCaption}>Use this if the barcode is damaged or unreadable</Text>
-            </View>
+          </View>
         </ScrollView>
-        
+
         {showCamera && (
-            <>
+          <>
             <CameraView
-                style={StyleSheet.absoluteFillObject}
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                barcodeScannerSettings={{
-                    barCodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code39', 'code128'],
-                }}
+              style={StyleSheet.absoluteFillObject}
+              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+              enableTorch={isFlashOn}
+              focusable={true}
             >
-                <View style={styles.cameraOverlay}>
-                    <Animated.View
-                        style={[
-                            styles.scanLine,
-                            {
-                            transform: [
-                                {
-                                translateY: lineAnimation.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0, 200], // Adjust the range based on your scanner area
-                                }),
-                                },
-                            ],
-                            },
-                        ]}
-                    />
-                </View>
+              <View style={styles.cameraOverlay}>
+                <TouchableOpacity
+                  style={styles.flashButton}
+                  onPress={toggleFlash}
+                >
+                  <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={28} color="white" />
+                </TouchableOpacity>
+                <Animated.View
+                  style={[
+                    styles.scanLine,
+                    {
+                      transform: [
+                        {
+                          translateY: lineAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 200], // Adjust the range based on your scanner area
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              </View>
             </CameraView>
             <TouchableOpacity
-                style={{
+              style={{
                 position: 'absolute',
                 top: insets.top + 10,
                 left: 20,
                 zIndex: 10,
-                }}
-                onPress={() => {
+              }}
+              onPress={() => {
                 setShowCamera(false);
                 setScanned(false);
-                }}
+              }}
             >
-                <Ionicons name="arrow-back" size={28} color="white" />
+              <Ionicons name="arrow-back" size={28} color="white" />
             </TouchableOpacity>
-            </>
+          </>
         )}
-        </View>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -283,5 +301,10 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: 'red',
     position: 'absolute',
+  },
+  flashButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
   },
 });
