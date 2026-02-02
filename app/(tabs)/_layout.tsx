@@ -70,7 +70,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons size={28} name="cart" color={color} />,
         }}
       />
-        <Tabs.Screen
+       <Tabs.Screen
         name="account"
         options={{
           title: 'Account',

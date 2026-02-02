@@ -166,10 +166,12 @@ export default function AccountScreen() {
             </TouchableOpacity>
         </Link>
 
-        <TouchableOpacity style={styles.logoutButton}>
-            <Ionicons name="log-out-outline" size={24} color="red" />
-            <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
+        <Link href="/login" asChild>
+            <TouchableOpacity style={styles.logoutButton}>
+                <Ionicons name="log-out-outline" size={24} color="red" />
+                <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+        </Link>
         </ScrollView>
         <Modal
             animationType="fade"

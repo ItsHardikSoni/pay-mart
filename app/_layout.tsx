@@ -60,6 +60,8 @@ export default function RootLayout() {
           />
           <Stack.Screen name="help-and-support" options={{ headerShown: false }} />
           <Stack.Screen name="order-history" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="signup" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </ThemeProvider>
