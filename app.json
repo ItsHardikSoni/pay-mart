@@ -9,7 +9,14 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "jsEngine": "jsc"
+      "jsEngine": "jsc",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs your location to verify that you are in the correct store for barcode scanning.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to verify that you are in the correct store for barcode scanning, even when the app is in the background.",
+        "UIBackgroundModes": [
+          "location"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {

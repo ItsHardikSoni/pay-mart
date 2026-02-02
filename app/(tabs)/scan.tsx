@@ -6,7 +6,6 @@ import { CameraView, BarCodeScanningResult, useCameraPermissions } from 'expo-ca
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
-import { useFocusEffect } from '@react-navigation/native';
 
 // Haversine formula to calculate distance between two coordinates
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -27,8 +26,8 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 // Define the allowed location and radius
 const ALLOWED_LOCATION = {
-  latitude: 25.610958086828944, // Example: Griham Hostel
-  longitude: 85.05541416931267,
+  latitude: 25.611228978859753, // Example: Griham Hostel
+  longitude: 85.05545708465635,
 };
 const MAX_DISTANCE = 200; // in meters
 
@@ -40,7 +39,6 @@ export default function ScanScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-
   const insets = useSafeAreaInsets();
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -48,23 +46,52 @@ export default function ScanScreen() {
   const lineAnimation = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      (async () => {
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setLocationError('Location permission not granted. Please enable it in settings.');
-          return;
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | undefined;
+    let serviceCheckInterval: NodeJS.Timeout | undefined;
+
+    const startWatching = async () => {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError('Location permission not granted. Please enable it in settings.');
+        return;
+      }
+
+      // Watch for position updates
+      locationSubscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 1000, // Update every second
+          distanceInterval: 1, // Update every meter
+        },
+        (newLocation) => {
+          setLocation(newLocation);
+          setLocationError(null); // Clear error on successful update
         }
-        try {
-          const location = await Location.getCurrentPositionAsync({});
-          setLocation(location);
-        } catch (error) {
-          setLocationError('Could not fetch location. Please ensure location services are enabled.');
+      );
+
+      // Periodically check if location services are enabled
+      serviceCheckInterval = setInterval(async () => {
+        const servicesEnabled = await Location.hasServicesEnabledAsync();
+        if (!servicesEnabled) {
+          setLocation(null); // Invalidate location
+          setLocationError('Please turn on location services to use the scanner.');
         }
-      })();
-    }, [])
-  );
+      }, 1000); // Check every second
+    };
+
+    startWatching();
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+      if (serviceCheckInterval) {
+        clearInterval(serviceCheckInterval);
+      }
+    };
+  }, []);
+
 
   async function playSound() {
     const { sound } = await Audio.Sound.createAsync(require('../../assets/sounds/beep.mp3'));
@@ -113,6 +140,27 @@ export default function ScanScreen() {
   ];  
 
   const handleBarCodeScanned = ({ type, data }: BarCodeScanningResult) => {
+    if (locationError) {
+      Alert.alert('Location', locationError);
+      setShowCamera(false);
+      return;
+    }
+    if (!location) {
+      Alert.alert('Location', 'Could not determine your location. Please ensure location services are enabled.');
+      setShowCamera(false);
+      return;
+    }
+    const distance = getDistance(
+      location.coords.latitude,
+      location.coords.longitude,
+      ALLOWED_LOCATION.latitude,
+      ALLOWED_LOCATION.longitude
+    );
+    if (distance > MAX_DISTANCE) {
+      Alert.alert('Out of Range', 'You have moved too far from the allowed scanning area.');
+      setShowCamera(false);
+      return;
+    }
     if (!SUPPORTED_TYPES.includes(type)) {
       return; // ignore unsupported barcode
     }
@@ -123,6 +171,28 @@ export default function ScanScreen() {
   };
 
   const handleManualBarcodeSearch = () => {
+    if (locationError) {
+      Alert.alert('Location', locationError);
+      return;
+    }
+
+    if (!location) {
+      Alert.alert('Location', 'Could not determine your location. Please ensure location services are enabled.');
+      return;
+    }
+
+    const distance = getDistance(
+      location.coords.latitude,
+      location.coords.longitude,
+      ALLOWED_LOCATION.latitude,
+      ALLOWED_LOCATION.longitude
+    );
+
+    if (distance > MAX_DISTANCE) {
+      Alert.alert('Out of Range', 'You are too far from the allowed scanning area.');
+      return;
+    }
+    
     if (manualBarcode.trim() === '') {
       Alert.alert('Empty Barcode', 'Please enter a barcode number.');
       return;
@@ -139,12 +209,12 @@ export default function ScanScreen() {
   
   const handleScanPress = () => {
     if (locationError) {
-      Alert.alert('Location Error', locationError);
+      Alert.alert('Location', locationError);
       return;
     }
 
     if (!location) {
-      Alert.alert('Location Not Found', 'Could not determine your location. Please ensure location services are enabled.');
+      Alert.alert('Location', 'Could not determine your location. Please ensure location services are enabled.');
       return;
     }
 
