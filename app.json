@@ -11,6 +11,8 @@
       "supportsTablet": true,
       "jsEngine": "jsc",
       "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to your camera to scan product barcodes.",
+        "NSMicrophoneUsageDescription": "This app does not require microphone access, but this permission is requested by the camera module.",
         "NSLocationWhenInUseUsageDescription": "This app needs your location to verify that you are in the correct store for barcode scanning.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to verify that you are in the correct store for barcode scanning, even when the app is in the background.",
         "UIBackgroundModes": [
