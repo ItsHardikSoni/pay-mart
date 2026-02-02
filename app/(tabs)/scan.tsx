@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, TextInput, Alert, ScrollView, Animated, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, BarCodeScanningResult, useCameraPermissions } from 'expo-camera';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
+import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Animated, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '../../supabaseClient';
 
 // Haversine formula to calculate distance between two coordinates
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -31,6 +32,15 @@ const ALLOWED_LOCATION = {
 };
 const MAX_DISTANCE = 200; // in meters
 
+type Product = {
+  id: string;
+  barcode: string;
+  name: string;
+  mrp: number;
+  discount_rate: number;
+  stock: number;
+};
+
 export default function ScanScreen() {
   const [showCamera, setShowCamera] = useState(false);
   const [barcode, setBarcode] = useState<string | null>(null);
@@ -45,10 +55,16 @@ export default function ScanScreen() {
   const [sound, setSound] = useState<Audio.Sound>();
   const lineAnimation = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductModalVisible, setIsProductModalVisible] = useState(false);
+  const [quantity, setQuantity] = useState('1');
+  const [isFetchingProduct, setIsFetchingProduct] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let locationSubscription: Location.LocationSubscription | undefined;
-    let serviceCheckInterval: NodeJS.Timeout | undefined;
+    let serviceCheckInterval: ReturnType<typeof setInterval> | undefined;
 
     const startWatching = async () => {
       const { status } = await Location.getForegroundPermissionsAsync();
@@ -107,13 +123,7 @@ export default function ScanScreen() {
       : undefined;
   }, [sound]);
 
-  useEffect(() => {
-    if (showCamera) {
-      startLineAnimation();
-    }
-  }, [showCamera]);
-
-  const startLineAnimation = () => {
+  const startLineAnimation = useCallback(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(lineAnimation, {
@@ -128,7 +138,13 @@ export default function ScanScreen() {
         }),
       ])
     ).start();
-  };
+  }, [lineAnimation]);
+
+  useEffect(() => {
+    if (showCamera) {
+      startLineAnimation();
+    }
+  }, [showCamera, startLineAnimation]);
 
   const SUPPORTED_TYPES = [
     'ean13',
@@ -139,7 +155,79 @@ export default function ScanScreen() {
     'code128',
   ];  
 
-  const handleBarCodeScanned = ({ type, data }: BarCodeScanningResult) => {
+  const fetchProductByBarcode = useCallback(
+    async (code: string) => {
+      console.log('SEARCHING BARCODE:', JSON.stringify(code));  // ADD THIS
+
+      try {
+        setIsFetchingProduct(true);
+
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, barcode, name, mrp, discount_rate, stock')
+          .eq('barcode', code.trim())
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching product', error);
+          Alert.alert('Error', 'Could not fetch product details. Please try again.');
+          return;
+        }
+
+        if (!data) {
+          Alert.alert('Not found', 'No product found for this barcode.');
+          return;
+        }
+
+        setSelectedProduct({
+          id: data.id,
+          barcode: data.barcode,
+          name: data.name,
+          mrp: Number(data.mrp),
+          discount_rate: Number(data.discount_rate ?? 0),
+          stock: Number(data.stock ?? 0),
+        });
+        setQuantity('1');
+        setIsProductModalVisible(true);
+      } catch (err) {
+        console.error('Unexpected error while fetching product', err);
+        Alert.alert('Error', 'Something went wrong while fetching product.');
+      } finally {
+        setIsFetchingProduct(false);
+      }
+    },
+    []
+  );
+
+  const handleAddToCart = () => {
+    if (!selectedProduct) return;
+
+    const qtyNumber = parseInt(quantity, 10);
+
+    if (isNaN(qtyNumber) || qtyNumber <= 0) {
+      Alert.alert('Invalid quantity', 'Please enter a valid quantity.');
+      return;
+    }
+
+    if (qtyNumber > selectedProduct.stock) {
+      Alert.alert('Stock', 'Requested quantity exceeds available stock.');
+      return;
+    }
+
+    // TODO: Replace this with your real cart state management
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    const message = `${qtyNumber} x ${selectedProduct.name} added to cart.`;
+    setToastMessage(message);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+
+    setIsProductModalVisible(false);
+  };
+
+  const handleBarCodeScanned = async ({ type, data }: BarcodeScanningResult) => {
     if (locationError) {
       Alert.alert('Location', locationError);
       setShowCamera(false);
@@ -167,7 +255,8 @@ export default function ScanScreen() {
     setScanned(true);
     setBarcode(data);
     setShowCamera(false);
-    playSound();
+    await playSound();
+    fetchProductByBarcode(data);
   };
 
   const handleManualBarcodeSearch = () => {
@@ -197,10 +286,11 @@ export default function ScanScreen() {
       Alert.alert('Empty Barcode', 'Please enter a barcode number.');
       return;
     }
-    setBarcode(manualBarcode);
+    const trimmed = manualBarcode.trim();
+    setBarcode(trimmed);
     setManualBarcode('');
-    Alert.alert('Barcode Entered', `You entered: ${manualBarcode}`);
     playSound();
+    fetchProductByBarcode(trimmed);
   };
 
   const toggleFlash = () => {
@@ -264,6 +354,11 @@ export default function ScanScreen() {
             {barcode && (
               <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold', color: '#6c63ff' }}>
                 Scanned Barcode: {barcode}
+              </Text>
+            )}
+            {isFetchingProduct && (
+              <Text style={{ marginTop: 8, fontSize: 14, color: '#666' }}>
+                Fetching product details...
               </Text>
             )}
 
@@ -347,6 +442,59 @@ export default function ScanScreen() {
               <Ionicons name="arrow-back" size={28} color="white" />
             </TouchableOpacity>
           </>
+        )}
+
+        <Modal
+          visible={isProductModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsProductModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              {selectedProduct ? (
+                <>
+                  <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
+                  <Text style={styles.modalSubtitle}>Barcode: {selectedProduct.barcode}</Text>
+                  <Text style={styles.modalText}>MRP: ₹{selectedProduct.mrp.toFixed(2)}</Text>
+                  <Text style={styles.modalText}>Discount: {selectedProduct.discount_rate}%</Text>
+                  <Text style={styles.modalText}>Stock available: {selectedProduct.stock}</Text>
+
+                  <View style={styles.quantityRow}>
+                    <Text style={styles.modalText}>Quantity:</Text>
+                    <TextInput
+                      style={styles.quantityInput}
+                      keyboardType="numeric"
+                      value={quantity}
+                      onChangeText={setQuantity}
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.addToCartButton}
+                    onPress={handleAddToCart}
+                  >
+                    <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setIsProductModalVisible(false)}
+                  >
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <Text style={styles.modalText}>Loading product...</Text>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {toastMessage && (
+          <View style={styles.toastContainer}>
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -449,5 +597,85 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
+  },
+  toastContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 32,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 6,
+  },
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  quantityInput: {
+    marginLeft: 8,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+  },
+  addToCartButton: {
+    backgroundColor: '#6c63ff',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  addToCartButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 14,
+    color: '#6c63ff',
+    fontWeight: '600',
   },
 });
