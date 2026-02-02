@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -38,13 +38,12 @@ const OrderHistory = () => {
         <Text style={styles.pageTitle}>Order History</Text>
       </TouchableOpacity>
       
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <FlatList
-          data={orders}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-        />
-      </ScrollView>
+      <FlatList
+        data={orders}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 };

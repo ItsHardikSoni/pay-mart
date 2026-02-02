@@ -15,6 +15,7 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [isLoading, setIsLoading] = useState(true);
+  const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -29,8 +30,8 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ThemeProvider value={theme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
@@ -43,7 +44,7 @@ export default function RootLayout() {
           <Stack.Screen name="help-and-support" options={{ headerShown: false }} />
           <Stack.Screen name="order-history" options={{ headerShown: false }} />
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </ThemeProvider>
     </SafeAreaView>
   );

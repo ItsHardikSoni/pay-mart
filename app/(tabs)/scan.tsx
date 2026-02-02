@@ -144,9 +144,11 @@ export default function ScanScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter barcode number"
+                placeholderTextColor="#888"
                 value={manualBarcode}
                 onChangeText={setManualBarcode}
                 keyboardType="numeric"
+                maxLength={13}
                 onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
               />
               <TouchableOpacity style={styles.searchButton} onPress={handleManualBarcodeSearch}>
