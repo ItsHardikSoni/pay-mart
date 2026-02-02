@@ -1,16 +1,45 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, TextInput, Alert, ScrollView, Animated, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, BarCodeScanningResult, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
+import * as Location from 'expo-location';
+import { useFocusEffect } from '@react-navigation/native';
+
+// Haversine formula to calculate distance between two coordinates
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // metres
+  const φ1 = lat1 * Math.PI/180; // φ, λ in radians
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lon2-lon1) * Math.PI/180;
+
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+          Math.cos(φ1) * Math.cos(φ2) *
+          Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  const d = R * c; // in metres
+  return d;
+}
+
+// Define the allowed location and radius
+const ALLOWED_LOCATION = {
+  latitude: 25.610958086828944, // Example: Griham Hostel
+  longitude: 85.05541416931267,
+};
+const MAX_DISTANCE = 200; // in meters
 
 export default function ScanScreen() {
   const [showCamera, setShowCamera] = useState(false);
   const [barcode, setBarcode] = useState<string | null>(null);
   const [manualBarcode, setManualBarcode] = useState('');
   const [isFlashOn, setIsFlashOn] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
 
   const insets = useSafeAreaInsets();
   const [scanned, setScanned] = useState(false);
@@ -18,6 +47,24 @@ export default function ScanScreen() {
   const [sound, setSound] = useState<Audio.Sound>();
   const lineAnimation = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLocationError('Location permission not granted. Please enable it in settings.');
+          return;
+        }
+        try {
+          const location = await Location.getCurrentPositionAsync({});
+          setLocation(location);
+        } catch (error) {
+          setLocationError('Could not fetch location. Please ensure location services are enabled.');
+        }
+      })();
+    }, [])
+  );
 
   async function playSound() {
     const { sound } = await Audio.Sound.createAsync(require('../../assets/sounds/beep.mp3'));
@@ -89,6 +136,33 @@ export default function ScanScreen() {
   const toggleFlash = () => {
     setIsFlashOn(!isFlashOn);
   };
+  
+  const handleScanPress = () => {
+    if (locationError) {
+      Alert.alert('Location Error', locationError);
+      return;
+    }
+
+    if (!location) {
+      Alert.alert('Location Not Found', 'Could not determine your location. Please ensure location services are enabled.');
+      return;
+    }
+
+    const distance = getDistance(
+      location.coords.latitude,
+      location.coords.longitude,
+      ALLOWED_LOCATION.latitude,
+      ALLOWED_LOCATION.longitude
+    );
+
+    if (distance > MAX_DISTANCE) {
+      Alert.alert('Out of Range', 'You are too far from the allowed scanning area.');
+      return;
+    }
+
+    setScanned(false);
+    setShowCamera(true);
+  };
 
   if (!permission) return null;
 
@@ -126,10 +200,7 @@ export default function ScanScreen() {
             <Text style={styles.promptText}>Point your camera at the product barcode</Text>
             <TouchableOpacity
               style={styles.startButton}
-              onPress={() => {
-                setScanned(false);
-                setShowCamera(true);
-              }}
+              onPress={handleScanPress}
             >
               <Ionicons name="scan" size={20} color="white" />
               <Text style={styles.startButtonText}>Scan Products</Text>

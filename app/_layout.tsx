@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useState, useEffect } from 'react';
 import SplashScreen from './splash';
+import * as Location from 'expo-location';
+import { Alert } from 'react-native';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -24,6 +26,21 @@ export default function RootLayout() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      (async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permission Denied',
+            'Location permission is required to use the barcode scanner feature. Please enable it in your device settings.',
+            [{ text: 'OK' }]
+          );
+        }
+      })();
+    }
+  }, [isLoading]);
 
   if (isLoading) {
     return <SplashScreen />;
