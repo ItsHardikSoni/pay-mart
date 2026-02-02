@@ -157,7 +157,7 @@ export default function ScanScreen() {
 
   const fetchProductByBarcode = useCallback(
     async (code: string) => {
-      console.log('SEARCHING BARCODE:', JSON.stringify(code));  // ADD THIS
+      // console.log('SEARCHING BARCODE:', JSON.stringify(code));  // ADD THIS
 
       try {
         setIsFetchingProduct(true);
@@ -454,35 +454,56 @@ export default function ScanScreen() {
             <View style={styles.modalContent}>
               {selectedProduct ? (
                 <>
-                  <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
-                  <Text style={styles.modalSubtitle}>Barcode: {selectedProduct.barcode}</Text>
-                  <Text style={styles.modalText}>MRP: ₹{selectedProduct.mrp.toFixed(2)}</Text>
-                  <Text style={styles.modalText}>Discount: {selectedProduct.discount_rate}%</Text>
-                  <Text style={styles.modalText}>Stock available: {selectedProduct.stock}</Text>
-
-                  <View style={styles.quantityRow}>
-                    <Text style={styles.modalText}>Quantity:</Text>
-                    <TextInput
-                      style={styles.quantityInput}
-                      keyboardType="numeric"
-                      value={quantity}
-                      onChangeText={setQuantity}
-                    />
+                  <View style={styles.modalHeader}>
+                    <View style={styles.modalTag}>
+                      <Text style={styles.modalTagText}>Product</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setIsProductModalVisible(false)}>
+                      <Ionicons name="close" size={22} color="#fff" />
+                    </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity
-                    style={styles.addToCartButton}
-                    onPress={handleAddToCart}
-                  >
-                    <Text style={styles.addToCartButtonText}>Add to Cart</Text>
-                  </TouchableOpacity>
+                  <View style={styles.modalBody}>
+                    <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
+                    <Text style={styles.modalSubtitle}>Barcode: {selectedProduct.barcode}</Text>
 
-                  <TouchableOpacity
-                    style={styles.closeButton}
-                    onPress={() => setIsProductModalVisible(false)}
-                  >
-                    <Text style={styles.closeButtonText}>Close</Text>
-                  </TouchableOpacity>
+                    <View style={styles.modalPriceRow}>
+                      <View>
+                        <Text style={styles.priceLabel}>MRP</Text>
+                        <Text style={styles.priceValue}>₹{selectedProduct.mrp.toFixed(2)}</Text>
+                      </View>
+                      <View style={styles.discountPill}>
+                        <Text style={styles.discountText}>{selectedProduct.discount_rate}₹ Save</Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.stockText}>Stock available: {selectedProduct.stock}</Text>
+
+                    <View style={styles.quantityRow}>
+                      <Text style={styles.modalText}>Quantity</Text>
+                      <TextInput
+                        style={styles.quantityInput}
+                        keyboardType="numeric"
+                        value={quantity}
+                        onChangeText={setQuantity}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.modalFooter}>
+                    <TouchableOpacity
+                      style={styles.secondaryButton}
+                      onPress={() => setIsProductModalVisible(false)}
+                    >
+                      <Text style={styles.secondaryButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.addToCartButton}
+                      onPress={handleAddToCart}
+                    >
+                      <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                    </TouchableOpacity>
+                  </View>
                 </>
               ) : (
                 <Text style={styles.modalText}>Loading product...</Text>
@@ -622,14 +643,42 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: '#6c63ff',
+  },
+  modalTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  modalTagText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+    paddingVertical: 18,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 14,
@@ -640,11 +689,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 6,
   },
+  modalPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  priceLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 2,
+  },
+  priceValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111',
+  },
+  discountPill: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  discountText: {
+    color: '#2e7d32',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  stockText: {
+    fontSize: 13,
+    color: '#4caf50',
+    marginTop: 4,
+  },
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 12,
-    marginBottom: 20,
+    marginBottom: 4,
   },
   quantityInput: {
     marginLeft: 8,
@@ -656,12 +738,38 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 16,
   },
+  modalFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#fafafa',
+  },
+  secondaryButton: {
+    flex: 1,
+    marginRight: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '500',
+  },
   addToCartButton: {
+    flex: 1,
+    marginLeft: 8,
     backgroundColor: '#6c63ff',
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 10,
   },
   addToCartButtonText: {
     color: 'white',
