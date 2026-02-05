@@ -3,10 +3,10 @@ import { Audio } from 'expo-av';
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../supabaseClient';
-import { router } from 'expo-router';
+import { cartState, CartItem } from '../cartState';
 
 // Haversine formula to calculate distance between two coordinates
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -60,11 +60,11 @@ export default function ScanScreen() {
   const lineAnimation = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isProductModalVisible, setIsProductModalVisible] = useState(false);
   const [quantity, setQuantity] = useState('1');
   const [isFetchingProduct, setIsFetchingProduct] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [productNotFoundError, setProductNotFoundError] = useState<string | null>(null);
 
   useEffect(() => {
     let locationSubscription: Location.LocationSubscription | undefined;
@@ -161,6 +161,8 @@ export default function ScanScreen() {
 
   const fetchProductByBarcode = useCallback(
     async (code: string) => {
+      setProductNotFoundError(null);
+      setSelectedProduct(null);
 
       try {
         setIsFetchingProduct(true);
@@ -173,12 +175,12 @@ export default function ScanScreen() {
 
         if (error) {
           console.error('Error fetching product', error);
-          Alert.alert('Error', 'Could not fetch product details. Please try again.');
+          setProductNotFoundError('Could not fetch product details. Please try again.');
           return;
         }
 
         if (!data) {
-          Alert.alert('Not found', 'No product found for this barcode.');
+          setProductNotFoundError('No product found for this barcode.');
           return;
         }
 
@@ -191,10 +193,9 @@ export default function ScanScreen() {
           stock: Number(data.stock ?? 0),
         });
         setQuantity('1');
-        setIsProductModalVisible(true);
       } catch (err) {
         console.error('Unexpected error while fetching product', err);
-        Alert.alert('Error', 'Something went wrong while fetching product.');
+        setProductNotFoundError('Something went wrong while fetching product.');
       } finally {
         setIsFetchingProduct(false);
       }
@@ -217,6 +218,19 @@ export default function ScanScreen() {
       return;
     }
 
+    const existingItem = cartState.items.find((item) => item.id === selectedProduct.id);
+
+    if (existingItem) {
+      existingItem.quantity += qtyNumber;
+    } else {
+      cartState.items.push({
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.mrp,
+        quantity: qtyNumber,
+      });
+    }
+
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
@@ -226,7 +240,8 @@ export default function ScanScreen() {
       setToastMessage(null);
     }, 2500);
 
-    setIsProductModalVisible(false);
+    setSelectedProduct(null);
+    setManualBarcode('');
   };
 
   const handleBarCodeScanned = async ({ type, data }: BarcodeScanningResult) => {
@@ -256,11 +271,6 @@ export default function ScanScreen() {
     }
     setScanned(true);
     setBarcode(data);
-    {isFetchingProduct && (
-      <Text style={{ marginTop: 8, fontSize: 14, color: '#666' }}>
-        Fetching product details...
-      </Text>
-    )}
     setManualBarcode(data);
     setShowCamera(false);
     await playSound();
@@ -353,23 +363,8 @@ export default function ScanScreen() {
         <ScrollView
           ref={scrollViewRef}
           style={styles.container}
-          contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+          contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
         >
-          <View style={styles.scanContainer}>
-            <Ionicons name="camera-outline" size={80} color="#6c63ff" />
-            <Text style={styles.readyToScanText}>Ready to Scan</Text>
-            <Text style={styles.promptText}>Point your camera at the product barcode</Text>
-            <TouchableOpacity
-              style={styles.startButton}
-              onPress={handleScanPress}
-            >
-              <Ionicons name="scan" size={20} color="white" />
-              <Text style={styles.startButtonText}>Scan Products</Text>
-            </TouchableOpacity>
-
-
-          </View>
-
           <View style={styles.manualContainer}>
             <Text style={styles.manualEntryTitle}>Manual Barcode Entry</Text>
             <View style={styles.inputContainer}>
@@ -388,7 +383,68 @@ export default function ScanScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.inputCaption}>Use this if the barcode is damaged or unreadable</Text>
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleScanPress}
+            >
+              <Ionicons name="scan" size={20} color="white" />
+              <Text style={styles.startButtonText}>Scan Products</Text>
+            </TouchableOpacity>
           </View>
+
+          {productNotFoundError && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{productNotFoundError}</Text>
+            </View>
+          )}
+
+          {isFetchingProduct && <Text>Fetching product...</Text>}
+
+          {selectedProduct && (
+            <View style={styles.productDetailsContainer}>
+                <View style={styles.modalBody}>
+                  <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
+                  <Text style={styles.modalSubtitle}>Barcode: {selectedProduct.barcode}</Text>
+
+                  <View style={styles.modalPriceRow}>
+                    <View>
+                      <Text style={styles.priceLabel}>MRP</Text>
+                      <Text style={styles.priceValue}>₹{selectedProduct.mrp.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.discountPill}>
+                      <Text style={styles.discountText}>{selectedProduct.discount_rate}₹ Save</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.stockText}>Stock available: {selectedProduct.stock}</Text>
+
+                  <View style={styles.quantityRow}>
+                    <Text style={styles.modalText}>Quantity</Text>
+                    <TextInput
+                      style={styles.quantityInput}
+                      keyboardType="numeric"
+                      value={quantity}
+                      onChangeText={setQuantity}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() => setSelectedProduct(null)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.addToCartButton}
+                    onPress={handleAddToCart}
+                  >
+                    <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                  </TouchableOpacity>
+                </View>
+            </View>
+          )}
         </ScrollView>
 
         {showCamera && (
@@ -439,75 +495,6 @@ export default function ScanScreen() {
             </TouchableOpacity>
           </>
         )}
-
-        <Modal
-          visible={isProductModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setIsProductModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              {selectedProduct ? (
-                <>
-                  <View style={styles.modalHeader}>
-                    <View style={styles.modalTag}>
-                      <Text style={styles.modalTagText}>Product</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => setIsProductModalVisible(false)}>
-                      <Ionicons name="close" size={22} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.modalBody}>
-                    <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
-                    <Text style={styles.modalSubtitle}>Barcode: {selectedProduct.barcode}</Text>
-
-                    <View style={styles.modalPriceRow}>
-                      <View>
-                        <Text style={styles.priceLabel}>MRP</Text>
-                        <Text style={styles.priceValue}>₹{selectedProduct.mrp.toFixed(2)}</Text>
-                      </View>
-                      <View style={styles.discountPill}>
-                        <Text style={styles.discountText}>{selectedProduct.discount_rate}₹ Save</Text>
-                      </View>
-                    </View>
-
-                    <Text style={styles.stockText}>Stock available: {selectedProduct.stock}</Text>
-
-                    <View style={styles.quantityRow}>
-                      <Text style={styles.modalText}>Quantity</Text>
-                      <TextInput
-                        style={styles.quantityInput}
-                        keyboardType="numeric"
-                        value={quantity}
-                        onChangeText={setQuantity}
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.modalFooter}>
-                    <TouchableOpacity
-                      style={styles.secondaryButton}
-                      onPress={() => setIsProductModalVisible(false)}
-                    >
-                      <Text style={styles.secondaryButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.addToCartButton}
-                      onPress={handleAddToCart}
-                    >
-                      <Text style={styles.addToCartButtonText}>Add to Cart</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              ) : (
-                <Text style={styles.modalText}>Loading product...</Text>
-              )}
-            </View>
-          </View>
-        </Modal>
-
         {toastMessage && (
           <View style={styles.toastContainer}>
             <Text style={styles.toastText}>{toastMessage}</Text>
@@ -630,22 +617,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+  productDetailsContainer: {
+    marginTop: 16,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 10,
   },
-  modalContent: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+  errorContainer: {
+    marginTop: 16,
+    backgroundColor: '#ffcdd2',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#b71c1c',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -771,15 +759,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  closeButton: {
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    fontSize: 14,
-    color: '#6c63ff',
-    fontWeight: '600',
   },
 });
