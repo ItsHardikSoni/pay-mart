@@ -12,16 +12,18 @@ export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
   const [image, setImage] = useState<string | null>(null);
-  const [name, setName] = useState('Not set');
-  const [phone, setPhone] = useState('Not set');
-  const [email, setEmail] = useState('Not set');
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [imageOptionsVisible, setImageOptionsVisible] = useState(false);
   const { session, logout } = useSession();
   const router = useRouter();
   const [tempName, setTempName] = useState(name);
+  const [tempUsername, setTempUsername] = useState(username);
   const [tempPhone, setTempPhone] = useState(phone);
   const [tempEmail, setTempEmail] = useState(email);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (session) {
@@ -31,30 +33,35 @@ export default function AccountScreen() {
 
   const fetchProfile = async () => {
     if (!session?.user?.phone_number) return;
+  
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('full_name, phone_number, email')
+        .select('full_name, username, phone_number, email')
         .eq('phone_number', session.user.phone_number)
         .single();
   
       if (error) {
-        console.error('Fetch profile error:', error);
+        console.error('Error fetching profile:', error);
         Alert.alert('Error', 'Could not fetch profile');
         return;
-      }    
-      setName(data.full_name || 'Not set');
-      setPhone(data.phone_number || 'Not set');
-      setEmail(data.email || 'Not set');
+      }
+  
+      setName(data.full_name || '');
+      setUsername(data.username || '');
+      setPhone(data.phone_number || '');
+      setEmail(data.email || '');
   
       setTempName(data.full_name || '');
+      setTempUsername(data.username || '');
       setTempPhone(data.phone_number || '');
       setTempEmail(data.email || '');
     } finally {
       setLoading(false);
     }
   };
+  
 
   const handleSave = async () => {
     setLoading(true);
@@ -63,6 +70,7 @@ export default function AccountScreen() {
         .from('users')
         .update({
           full_name: tempName,
+          username: tempUsername,
           phone_number: tempPhone,
           email: tempEmail,
         })
@@ -74,6 +82,7 @@ export default function AccountScreen() {
       }
   
       setName(tempName);
+      setUsername(tempUsername);
       setPhone(tempPhone);
       setEmail(tempEmail);
       setModalVisible(false);
@@ -81,7 +90,7 @@ export default function AccountScreen() {
       setLoading(false);
     }
   };
-  
+    
 
   const handleImagePress = () => {
     setImageOptionsVisible(true);
@@ -174,27 +183,36 @@ export default function AccountScreen() {
                 <Text style={styles.editButton}> <Ionicons name="create-outline" size={16} color="#6c63ff" /> Edit</Text>
             </TouchableOpacity>
             </View>
-            <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={24} color="#ccc" />
-            <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Name</Text>
-                <Text style={styles.infoValue}>{name}</Text>
-            </View>
-            </View>
-            <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={24} color="#ccc" />
-            <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Phone</Text>
-                <Text style={styles.infoValue}>{phone}</Text>
-            </View>
-            </View>
-            <View style={styles.infoRow}>
-            <Ionicons name="mail-outline" size={24} color="#ccc" />
-            <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{email}</Text>
-            </View>
-            </View>
+            {loading ? <Text>Loading...</Text> : <>
+                <View style={styles.infoRow}>
+                <Ionicons name="person-outline" size={24} color="#ccc" />
+                <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Name</Text>
+                    <Text style={styles.infoValue}>{name}</Text>
+                </View>
+                </View>
+                <View style={styles.infoRow}>
+                <Ionicons name="at-outline" size={24} color="#ccc" />
+                <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Username</Text>
+                    <Text style={styles.infoValue}>{username}</Text>
+                </View>
+                </View>
+                <View style={styles.infoRow}>
+                <Ionicons name="call-outline" size={24} color="#ccc" />
+                <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Phone</Text>
+                    <Text style={styles.infoValue}>{phone}</Text>
+                </View>
+                </View>
+                <View style={styles.infoRow}>
+                <Ionicons name="mail-outline" size={24} color="#ccc" />
+                <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Email</Text>
+                    <Text style={styles.infoValue}>{email}</Text>
+                </View>
+                </View>
+            </>}
         </View>
 
         <View style={[styles.card, styles.ordersCard]}>
@@ -262,6 +280,15 @@ export default function AccountScreen() {
                                 onChangeText={setTempName}
                                 value={tempName}
                                 placeholder="Enter your name"
+                            />
+
+                            <Text style={styles.inputLabel}>Username</Text>
+                            <TextInput
+                                style={styles.input}
+                                onChangeText={setTempUsername}
+                                value={tempUsername}
+                                placeholder="Enter your username"
+                                autoCapitalize="none"
                             />
 
                             <Text style={styles.inputLabel}>Phone</Text>
