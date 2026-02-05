@@ -1,4 +1,3 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
@@ -7,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../supabaseClient';
+import { router } from 'expo-router';
 
 // Haversine formula to calculate distance between two coordinates
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -161,7 +161,6 @@ export default function ScanScreen() {
 
   const fetchProductByBarcode = useCallback(
     async (code: string) => {
-      // console.log('SEARCHING BARCODE:', JSON.stringify(code));  // ADD THIS
 
       try {
         setIsFetchingProduct(true);
@@ -218,7 +217,6 @@ export default function ScanScreen() {
       return;
     }
 
-    // TODO: Replace this with your real cart state management
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
@@ -258,6 +256,12 @@ export default function ScanScreen() {
     }
     setScanned(true);
     setBarcode(data);
+    {isFetchingProduct && (
+      <Text style={{ marginTop: 8, fontSize: 14, color: '#666' }}>
+        Fetching product details...
+      </Text>
+    )}
+    setManualBarcode(data);
     setShowCamera(false);
     await playSound();
     fetchProductByBarcode(data);
@@ -292,7 +296,6 @@ export default function ScanScreen() {
     }
     const trimmed = manualBarcode.trim();
     setBarcode(trimmed);
-    setManualBarcode('');
     playSound();
     fetchProductByBarcode(trimmed);
   };
@@ -355,17 +358,6 @@ export default function ScanScreen() {
           <View style={styles.scanContainer}>
             <Ionicons name="camera-outline" size={80} color="#6c63ff" />
             <Text style={styles.readyToScanText}>Ready to Scan</Text>
-            {barcode && (
-              <Text style={{ marginTop: 12, fontSize: 18, fontWeight: 'bold', color: '#6c63ff' }}>
-                Scanned Barcode: {barcode}
-              </Text>
-            )}
-            {isFetchingProduct && (
-              <Text style={{ marginTop: 8, fontSize: 14, color: '#666' }}>
-                Fetching product details...
-              </Text>
-            )}
-
             <Text style={styles.promptText}>Point your camera at the product barcode</Text>
             <TouchableOpacity
               style={styles.startButton}
