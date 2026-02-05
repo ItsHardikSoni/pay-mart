@@ -89,11 +89,6 @@ export default function SignupScreen() {
               </TouchableOpacity>
             </Link>
           </View>
-
-          <View style={styles.demoContainer}>
-            <Text style={styles.demoText}>Demo credentials for testing:</Text>
-            <Text style={styles.demoText}>Email: demo@example.com | Password: demo123</Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

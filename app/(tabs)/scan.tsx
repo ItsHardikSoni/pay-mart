@@ -26,11 +26,15 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 // Define the allowed location and radius
+// const ALLOWED_LOCATION = {
+//   latitude: 25.612251780611935, // Example: Amity University
+//   longitude: 85.0542689775534,
+// };
 const ALLOWED_LOCATION = {
-  latitude: 25.611228978859753, // Example: Griham Hostel
-  longitude: 85.05545708465635,
+  latitude: 25.610465587079343, // Example: Griham Hostel
+  longitude: 85.05561450520987, 
 };
-const MAX_DISTANCE = 200; // in meters
+const MAX_DISTANCE = 100; // in meters
 
 type Product = {
   id: string;
