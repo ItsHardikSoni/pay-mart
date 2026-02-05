@@ -14,15 +14,16 @@ import { Link, useRouter } from 'expo-router';
 import LottieView from 'lottie-react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabaseClient';
-import { navigate } from 'expo-router/build/global-state/routing';
 
 export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullNameError, setFullNameError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -50,6 +51,7 @@ export default function SignupScreen() {
   const validate = () => {
     let valid = true;
     setFullNameError('');
+    setUsernameError('');
     setPhoneError('');
     setEmailError('');
     setPasswordError('');
@@ -58,6 +60,12 @@ export default function SignupScreen() {
     if (fullName.trim() === '') {
       setFullNameError('Full name is required');
       valid = false;
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(username)) {
+        setUsernameError('Username must contain only characters, digits, and underscores (_)');
+        valid = false;
     }
 
     if (phoneNumber.length !== 10) {
@@ -87,18 +95,32 @@ export default function SignupScreen() {
   const handleSignUp = async () => {
     if (validate()) {
       try {
-        // Check if user already exists
+        // Check if username is already taken
+        const { data: usernameData, error: usernameError } = await supabase
+            .from('users')
+            .select('username')
+            .eq('username', username);
+
+        if (usernameError) throw usernameError;
+        if (usernameData && usernameData.length > 0) {
+            setToastMessage('Username already taken');
+            setToastType('error');
+            return;
+        }
+
+        // Check if email or phone number already exists
         const { data: existingUsers, error: existingUserError } = await supabase
           .from('users')
           .select('email, phone_number')
-          .or(`email.eq.${email}`, `phone_number.eq.${phoneNumber}`);
+          .or(`email.eq.${email},phone_number.eq.${phoneNumber}`);
 
         if (existingUserError) {
           throw existingUserError;
         }
 
         if (existingUsers && existingUsers.length > 0) {
-          setToastMessage('User already registered');
+          setToastMessage('User with this email or phone number already exists');
+          setToastType('error');
           return;
         }
 
@@ -108,9 +130,10 @@ export default function SignupScreen() {
           .insert([
             {
               full_name: fullName,
+              username: username,
               phone_number: phoneNumber,
               email: email,
-              password: password, // Storing plain text password (NOT RECOMMENDED)
+              password: password,
             },
           ]);
 
@@ -122,7 +145,8 @@ export default function SignupScreen() {
         setToastType('success');
         router.replace('/login');
       } catch (error) {
-        setToastMessage(error.message || 'User already registered');
+        setToastMessage(error.message || 'An error occurred during registration.');
+        setToastType('error');
       }
     }
   };
@@ -166,6 +190,16 @@ export default function SignupScreen() {
               onChangeText={setFullName}
             />
             {!!fullNameError && <Text style={styles.errorText}>{fullNameError}</Text>}
+
+            <Text style={styles.label}>Username <Text style={styles.required}>*</Text></Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Choose a username"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+            />
+            {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
 
             <Text style={styles.label}>Phone Number <Text style={styles.required}>*</Text></Text>
             <TextInput

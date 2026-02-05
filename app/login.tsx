@@ -16,9 +16,9 @@ import { supabase } from '../supabaseClient';
 import { useSession } from './context/SessionProvider';
 
 export default function LoginScreen() {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [phoneError, setPhoneError] = useState('');
+  const [identifierError, setIdentifierError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -36,7 +36,6 @@ export default function LoginScreen() {
     }
   }, [toastMessage]);
 
-  // If already logged in, skip the login screen
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
       router.replace('/(tabs)');
@@ -49,11 +48,11 @@ export default function LoginScreen() {
 
   const validate = () => {
     let valid = true;
-    setPhoneError('');
+    setIdentifierError('');
     setPasswordError('');
 
-    if (!phoneNumber) {
-      setPhoneError('Phone Number is required');
+    if (!loginIdentifier) {
+      setIdentifierError('Phone/Email/Username is required');
       valid = false;
     }
     if (!password) {
@@ -72,17 +71,17 @@ export default function LoginScreen() {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('phone_number', phoneNumber)
+        .or(`phone_number.eq.${loginIdentifier},email.eq.${loginIdentifier},username.eq.${loginIdentifier}`)
         .single();
 
       if (error || !data) {
-        setToastMessage('Invalid phone number or password');
+        setToastMessage('Invalid credentials');
         setToastType('error');
         return;
       }
 
       if (data.password !== password) {
-        setToastMessage('Invalid phone number or password');
+        setToastMessage('Invalid credentials');
         setToastType('error');
         return;
       }
@@ -99,7 +98,6 @@ export default function LoginScreen() {
   };
 
   const handleGoogleSignIn = () => {
-    // Handle Google sign-in logic here
     console.log('Signing in with Google...');
   };
 
@@ -125,16 +123,15 @@ export default function LoginScreen() {
           <Text style={styles.welcomeText}>Welcome Back</Text>
           <Text style={styles.signInText}>Sign in to continue shopping</Text>
 
-          <Text style={styles.label}>Phone Number <Text style={styles.required}>*</Text></Text>
+          <Text style={styles.label}>Phone/Email/Username <Text style={styles.required}>*</Text></Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter your phone number"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            keyboardType="phone-pad"
-            maxLength={10}
+            placeholder="Enter your Phone/Email/Username"
+            value={loginIdentifier}
+            onChangeText={setLoginIdentifier}
+            autoCapitalize="none"
           />
-          {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
+          {!!identifierError && <Text style={styles.errorText}>{identifierError}</Text>}
 
 
           <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>

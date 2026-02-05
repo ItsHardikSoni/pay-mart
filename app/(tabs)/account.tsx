@@ -2,10 +2,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Link, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../context/SessionProvider';
+import { supabase } from '../../supabaseClient';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
@@ -13,17 +14,74 @@ export default function AccountScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [name, setName] = useState('Not set');
   const [phone, setPhone] = useState('Not set');
+  const [email, setEmail] = useState('Not set');
   const [imageOptionsVisible, setImageOptionsVisible] = useState(false);
-  const { logout } = useSession();
+  const { session, logout } = useSession();
   const router = useRouter();
   const [tempName, setTempName] = useState(name);
   const [tempPhone, setTempPhone] = useState(phone);
+  const [tempEmail, setTempEmail] = useState(email);
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (session) {
+      fetchProfile();
+    }
+  }, [session]);
+
+  const fetchProfile = async () => {
+    if (!session?.user?.phone_number) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('full_name, phone_number, email')
+        .eq('phone_number', session.user.phone_number)
+        .single();
+  
+      if (error) {
+        console.error('Fetch profile error:', error);
+        Alert.alert('Error', 'Could not fetch profile');
+        return;
+      }    
+      setName(data.full_name || 'Not set');
+      setPhone(data.phone_number || 'Not set');
+      setEmail(data.email || 'Not set');
+  
+      setTempName(data.full_name || '');
+      setTempPhone(data.phone_number || '');
+      setTempEmail(data.email || '');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: tempName,
+          phone_number: tempPhone,
+          email: tempEmail,
+        })
+        .eq('phone_number', session.user.phone_number);
+  
+      if (error) {
+        Alert.alert('Error', 'Could not update profile');
+        return;
+      }
+  
       setName(tempName);
       setPhone(tempPhone);
+      setEmail(tempEmail);
       setModalVisible(false);
-  }
+    } finally {
+      setLoading(false);
+    }
+  };
+  
 
   const handleImagePress = () => {
     setImageOptionsVisible(true);
@@ -124,17 +182,17 @@ export default function AccountScreen() {
             </View>
             </View>
             <View style={styles.infoRow}>
-            <Ionicons name="mail-outline" size={24} color="#ccc" />
-            <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>Not set</Text>
-            </View>
-            </View>
-            <View style={styles.infoRow}>
             <Ionicons name="call-outline" size={24} color="#ccc" />
             <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Phone</Text>
                 <Text style={styles.infoValue}>{phone}</Text>
+            </View>
+            </View>
+            <View style={styles.infoRow}>
+            <Ionicons name="mail-outline" size={24} color="#ccc" />
+            <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Email</Text>
+                <Text style={styles.infoValue}>{email}</Text>
             </View>
             </View>
         </View>
@@ -214,9 +272,17 @@ export default function AccountScreen() {
                                 placeholder="Enter your phone"
                                 keyboardType="phone-pad"
                             />
+                             <Text style={styles.inputLabel}>Email</Text>
+                            <TextInput
+                                style={styles.input}
+                                onChangeText={setTempEmail}
+                                value={tempEmail}
+                                placeholder="Enter your email"
+                                keyboardType="email-address"
+                            />
 
-                            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                                <Text style={styles.saveButtonText}>Save Changes</Text>
+                            <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
+                                <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Changes'}</Text>
                             </TouchableOpacity>
                         </View>
                     </TouchableWithoutFeedback>
