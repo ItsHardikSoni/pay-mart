@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,14 +8,91 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
-  Image
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { Link, useRouter, useNavigation } from 'expo-router';
+import { supabase } from '../supabaseClient';
+import LottieView from 'lottie-react-native';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const router = useRouter();
+  const navigation = useNavigation();
+  const animation = useRef(null);
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage('');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  useEffect(() => {
+    animation.current?.play();
+  }, []);
+
+  const validate = () => {
+    let valid = true;
+    setPhoneError('');
+    setPasswordError('');
+
+    if (!phoneNumber) {
+      setPhoneError('Phone Number is required');
+      valid = false;
+    }
+    if (!password) {
+      setPasswordError('Password is required');
+      valid = false;
+    }
+    return valid;
+  }
+
+  const handleSignIn = async () => {
+    if (!validate()) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone_number', phoneNumber)
+        .single();
+
+      if (error || !data) {
+        setToastMessage('Invalid phone number or password');
+        setToastType('error');
+        return;
+      }
+
+      if (data.password !== password) {
+        setToastMessage('Invalid phone number or password');
+        setToastType('error');
+        return;
+      }
+
+      setToastMessage('Login successful!');
+      setToastType('success');
+      navigation.navigate('(tabs)');
+
+    } catch (error) {
+      setToastMessage(error.message || 'An unexpected error occurred.');
+      setToastType('error');
+    }
+  };
+
+  const handleGoogleSignIn = () => {
+    // Handle Google sign-in logic here
+    console.log('Signing in with Google...');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -24,9 +101,13 @@ export default function LoginScreen() {
         style={styles.container}
       >
         <View style={styles.logoContainer}>
-          <View style={styles.logoBackground}>
-            <Ionicons name="cart-outline" size={40} color="white" />
-          </View>
+            <LottieView
+              ref={animation}
+              source={require('../assets/lottie/Profile_Icon.json')}
+              autoPlay={false}
+              loop={false}
+              style={styles.lottie}
+            />
           <Text style={styles.title}>Pay Mart</Text>
           <Text style={styles.subtitle}>Scan & Pay - Skip the queue</Text>
         </View>
@@ -35,37 +116,58 @@ export default function LoginScreen() {
           <Text style={styles.welcomeText}>Welcome Back</Text>
           <Text style={styles.signInText}>Sign in to continue shopping</Text>
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Phone Number <Text style={styles.required}>*</Text></Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
+            placeholder="Enter your phone number"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+            maxLength={10}
           />
+          {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
 
-          <TouchableOpacity style={styles.signInButton}>
+          <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+
+
+          <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
             <Text style={styles.signInButtonText}>Sign In</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
+            <FontAwesome name="google" size={20} color="white" />
+            <Text style={styles.googleButtonText}>Sign In with Google</Text>
           </TouchableOpacity>
 
           <Link href="/signup" asChild>
             <TouchableOpacity>
               <Text style={styles.signUpText}>
-                Don't have an account? <Text style={{fontWeight: 'bold', color: '#6c63ff'}}>Sign up</Text>
+                Don't have an account? <Text style={{fontWeight: 'bold', color: '#6c63ff'}}>Sign up
+                </Text>
               </Text>
             </TouchableOpacity>
           </Link>
         </View>
+
+        {!!toastMessage && (
+          <View style={[styles.toast, toastType === 'success' ? styles.successToast : styles.errorToast]}>
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -86,10 +188,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  logoBackground: {
-    backgroundColor: '#6c63ff',
-    borderRadius: 50,
-    padding: 20,
+  lottie: {
+    width: 150,
+    height: 150,
     marginBottom: 20,
   },
   title: {
@@ -128,11 +229,27 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 5,
   },
+  required: {
+    color: 'red',
+  },
   input: {
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
     padding: 15,
-    marginBottom: 15,
+    marginBottom: 5,
+    fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    paddingRight: 15,
+    marginBottom: 5,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 15,
     fontSize: 16,
   },
   signInButton: {
@@ -140,23 +257,54 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
-    marginBottom: 20,
+    marginTop: 15,
+    marginBottom: 10,
   },
   signInButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
+  googleButton: {
+    backgroundColor: '#4285F4',
+    borderRadius: 8,
+    padding: 15,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  googleButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
   signUpText: {
     textAlign: 'center',
     color: '#666',
   },
-  demoContainer: {
-    marginTop: 30,
-    alignItems: 'center',
+  toast: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 8,
   },
-  demoText: {
-    color: '#666',
+  successToast: {
+    backgroundColor: '#4CAF50',
+  },
+  errorToast: {
+    backgroundColor: '#F44336',
+  },
+  toastText: {
+    color: 'white',
+    textAlign: 'center',
+  },
+  errorText: {
+    color: 'red',
     fontSize: 12,
+    marginBottom: 10,
   },
 });

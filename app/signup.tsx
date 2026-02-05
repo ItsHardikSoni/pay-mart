@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,14 +10,127 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
+import LottieView from 'lottie-react-native';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { supabase } from '../supabaseClient';
+import { navigate } from 'expo-router/build/global-state/routing';
 
 export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullNameError, setFullNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const router = useRouter();
+  const animation = useRef(null);
+
+  useEffect(() => {
+    animation.current?.play();
+  }, []);
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage('');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const validate = () => {
+    let valid = true;
+    setFullNameError('');
+    setPhoneError('');
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+
+    if (fullName.trim() === '') {
+      setFullNameError('Full name is required');
+      valid = false;
+    }
+
+    if (phoneNumber.length !== 10) {
+      setPhoneError('Phone number must be 10 digits');
+      valid = false;
+    }
+
+    if (!email.includes('@gmail.com')) {
+      setEmailError('Email must be a valid @gmail.com address');
+      valid = false;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setPasswordError('Password must contain at least 1 digit, 1 special character, 1 uppercase and 1 lowercase letter');
+      valid = false;
+    }
+
+    if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+      valid = false;
+    }
+
+    return valid;
+  };
+
+  const handleSignUp = async () => {
+    if (validate()) {
+      try {
+        // Check if user already exists
+        const { data: existingUsers, error: existingUserError } = await supabase
+          .from('users')
+          .select('email, phone_number')
+          .or(`email.eq.${email}`, `phone_number.eq.${phoneNumber}`);
+
+        if (existingUserError) {
+          throw existingUserError;
+        }
+
+        if (existingUsers && existingUsers.length > 0) {
+          setToastMessage('User already registered');
+          return;
+        }
+
+        // Insert new user
+        const { data, error } = await supabase
+          .from('users')
+          .insert([
+            {
+              full_name: fullName,
+              phone_number: phoneNumber,
+              email: email,
+              password: password, // Storing plain text password (NOT RECOMMENDED)
+            },
+          ]);
+
+        if (error) {
+          throw error;
+        }
+
+        setToastMessage('Successfully registered!');
+        setToastType('success');
+        router.replace('/login');
+      } catch (error) {
+        setToastMessage('User already registered' || error.message);
+      }
+    }
+  };
+
+  const handleGoogleSignUp = () => {
+    // Handle Google sign-up logic here
+    console.log('Signing up with Google...');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -25,14 +138,18 @@ export default function SignupScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoContainer}>
-            <View style={styles.logoBackground}>
-              <Ionicons name="cart-outline" size={40} color="white" />
-            </View>
+            <LottieView
+              ref={animation}
+              source={require('../assets/lottie/Profile_Icon.json')}
+              autoPlay={false}
+              loop={false}
+              style={styles.lottie}
+            />
             <Text style={styles.title}>Smart Scan & Pay</Text>
             <Text style={styles.subtitle}>Skip the queue, shop smart</Text>
           </View>
@@ -41,24 +158,27 @@ export default function SignupScreen() {
             <Text style={styles.welcomeText}>Create Account</Text>
             <Text style={styles.signInText}>Sign up to start shopping</Text>
 
-            <Text style={styles.label}>Full Name</Text>
+            <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
             <TextInput
               style={styles.input}
               placeholder="Enter your name"
               value={fullName}
               onChangeText={setFullName}
             />
+            {!!fullNameError && <Text style={styles.errorText}>{fullNameError}</Text>}
 
-            <Text style={styles.label}>Phone Number</Text>
+            <Text style={styles.label}>Phone Number <Text style={styles.required}>*</Text></Text>
             <TextInput
               style={styles.input}
               placeholder="Enter your phone"
               value={phoneNumber}
               onChangeText={setPhoneNumber}
               keyboardType="phone-pad"
+              maxLength={10}
             />
+            {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
 
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Email <Text style={styles.required}>*</Text></Text>
             <TextInput
               style={styles.input}
               placeholder="Enter your email"
@@ -67,18 +187,45 @@ export default function SignupScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
             />
+            {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
 
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
+            <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter your password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
 
-            <TouchableOpacity style={styles.signInButton}>
+            <Text style={styles.label}>Confirm Password <Text style={styles.required}>*</Text></Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+              />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {!!confirmPasswordError && <Text style={styles.errorText}>{confirmPasswordError}</Text>}
+
+            <TouchableOpacity style={styles.signInButton} onPress={handleSignUp}>
               <Text style={styles.signInButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
+              <FontAwesome name="google" size={20} color="white" />
+              <Text style={styles.googleButtonText}>Sign Up with Google</Text>
             </TouchableOpacity>
 
             <Link href="/login" asChild>
@@ -90,6 +237,11 @@ export default function SignupScreen() {
             </Link>
           </View>
         </ScrollView>
+        {!!toastMessage && (
+          <View style={[styles.toast, toastType === 'success' ? styles.successToast : styles.errorToast]}>
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -110,10 +262,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  logoBackground: {
-    backgroundColor: '#6c63ff',
-    borderRadius: 50,
-    padding: 20,
+  lottie: {
+    width: 150,
+    height: 150,
     marginBottom: 20,
   },
   title: {
@@ -159,6 +310,19 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontSize: 16,
   },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    paddingRight: 15,
+    marginBottom: 15,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 15,
+    fontSize: 16,
+  },
   signInButton: {
     backgroundColor: '#1a1a1a',
     borderRadius: 8,
@@ -171,16 +335,49 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  googleButton: {
+    backgroundColor: '#4285F4',
+    borderRadius: 8,
+    padding: 15,
+    alignItems: 'center',
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  googleButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
   signUpText: {
     textAlign: 'center',
     color: '#666',
   },
-  demoContainer: {
-    marginTop: 30,
-    alignItems: 'center',
+  required: {
+    color: 'red',
   },
-  demoText: {
-    color: '#666',
+  errorText: {
+    color: 'red',
     fontSize: 12,
+    marginBottom: 10,
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 8,
+  },
+  successToast: {
+    backgroundColor: '#4CAF50',
+  },
+  errorToast: {
+    backgroundColor: '#F44336',
+  },
+  toastText: {
+    color: 'white',
+    textAlign: 'center',
   },
 });

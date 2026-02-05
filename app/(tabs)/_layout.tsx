@@ -11,15 +11,6 @@ import { Text } from 'react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { session, isLoading } = useSession();
-
-  if (isLoading) {
-    return <Text>Loading...</Text>;
-  }
-
-  if (!session) {
-    return <Redirect href="/login" />;
-  }
 
   return (
     <Tabs
