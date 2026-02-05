@@ -1,10 +1,8 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { Link, useRouter } from 'expo-router';
 import LottieView from 'lottie-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -34,8 +32,6 @@ export default function SignupScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
-  const [image, setImage] = useState<string | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const router = useRouter();
   const animation = useRef(null);
 
@@ -51,67 +47,6 @@ export default function SignupScreen() {
       return () => clearTimeout(timer);
     }
   }, [toastMessage]);
-
-  const handleImagePress = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setToastMessage('Permission to access gallery is required');
-      setToastType('error');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
-    }
-  };
-
-  const uploadProfileImage = async (): Promise<string | null> => {
-    if (!image) return null;
-
-    try {
-      setUploadingImage(true);
-
-      const fileExt = image.split('.').pop() || 'jpg';
-      const baseId = username || phoneNumber || email || 'user';
-      const fileName = `${baseId}-${Date.now()}.${fileExt}`;
-      const filePath = `profile-images/${fileName}`;
-
-      // React Native upload: use file object with uri
-      const file = {
-        uri: image,
-        name: fileName,
-        type: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
-      } as any;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) {
-        console.error('Error uploading signup image:', uploadError);
-        setToastMessage('Could not upload profile image');
-        setToastType('error');
-        return null;
-      }
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      return data.publicUrl;
-    } catch (err) {
-      console.error('Unexpected error uploading signup image:', err);
-      setToastMessage('Unexpected error while uploading image');
-      setToastType('error');
-      return null;
-    } finally {
-      setUploadingImage(false);
-    }
-  };
 
   const validate = () => {
     let valid = true;
@@ -189,12 +124,6 @@ export default function SignupScreen() {
           return;
         }
 
-        // Upload profile image if selected
-        let profileImageUrl: string | null = null;
-        if (image) {
-          profileImageUrl = await uploadProfileImage();
-        }
-
         // Insert new user
         const { data, error } = await supabase
           .from('users')
@@ -205,7 +134,6 @@ export default function SignupScreen() {
               phone_number: phoneNumber,
               email: email,
               password: password,
-              profile_image: profileImageUrl,
             },
           ]);
 
@@ -253,19 +181,7 @@ export default function SignupScreen() {
           <View style={styles.card}>
             <Text style={styles.welcomeText}>Create Account</Text>
             <Text style={styles.signInText}>Sign up to start shopping</Text>
-            <View style={styles.profileImageWrapper}>
-              <TouchableOpacity onPress={handleImagePress} style={styles.profileImageContainer}>
-                {image ? (
-                  <Image source={{ uri: image }} style={styles.profileImage} />
-                ) : (
-                  <Ionicons name="person-circle-outline" size={80} color="#6c63ff" />
-                )}
-                <View style={styles.editIconContainer}>
-                  <Ionicons name="create-outline" size={16} color="#6c63ff" />
-                </View>
-              </TouchableOpacity>
-            </View>
-
+            
             <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
             <TextInput
               style={styles.input}
@@ -405,28 +321,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  profileImageWrapper: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImageContainer: {
-    position: 'relative',
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: '#6c63ff',
-  },
-  editIconContainer: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 4,
   },
   welcomeText: {
     fontSize: 18,

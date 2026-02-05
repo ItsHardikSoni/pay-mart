@@ -34,11 +34,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.scanButton}>
-        <Ionicons name="scan" size={24} color="white" />
-        <Text style={styles.scanButtonText}>Scan Product</Text>
-      </TouchableOpacity>
-
       <TouchableOpacity style={styles.optionButton}>
         <Ionicons name="cart" size={24} color="#6c63ff" />
         <View>
@@ -139,22 +134,6 @@ const styles = StyleSheet.create({
   rupeeIcon: {
     fontSize: 24,
     color: '#6c63ff',
-  },
-  scanButton: {
-    backgroundColor: '#6c63ff',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 15,
-    borderRadius: 15,
-    marginHorizontal: 20,
-    marginVertical: 10,
-  },
-  scanButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 10,
   },
   optionButton: {
     backgroundColor: 'white',
