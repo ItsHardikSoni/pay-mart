@@ -1,18 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Link, useRouter } from 'expo-router';
+import LottieView from 'lottie-react-native';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { Link, useRouter, useNavigation } from 'expo-router';
 import { supabase } from '../supabaseClient';
-import LottieView from 'lottie-react-native';
+import { useSession } from './context/SessionProvider';
 
 export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -21,9 +22,9 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('success');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const router = useRouter();
-  const navigation = useNavigation();
+  const { isLoggedIn, isLoading, login } = useSession();
   const animation = useRef(null);
 
   useEffect(() => {
@@ -34,6 +35,13 @@ export default function LoginScreen() {
       return () => clearTimeout(timer);
     }
   }, [toastMessage]);
+
+  // If already logged in, skip the login screen
+  useEffect(() => {
+    if (!isLoading && isLoggedIn) {
+      router.replace('/(tabs)');
+    }
+  }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
     animation.current?.play();
@@ -81,7 +89,8 @@ export default function LoginScreen() {
 
       setToastMessage('Login successful!');
       setToastType('success');
-      navigation.navigate('(tabs)');
+      await login();
+      router.replace('/(tabs)');
 
     } catch (error) {
       setToastMessage(error.message || 'An unexpected error occurred.');

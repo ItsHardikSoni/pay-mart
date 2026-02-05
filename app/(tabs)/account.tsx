@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Modal, TextInput, TouchableWithoutFeedback, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { Link, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSession } from '../context/SessionProvider';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
@@ -13,8 +14,8 @@ export default function AccountScreen() {
   const [name, setName] = useState('Not set');
   const [phone, setPhone] = useState('Not set');
   const [imageOptionsVisible, setImageOptionsVisible] = useState(false);
-
-
+  const { logout } = useSession();
+  const router = useRouter();
   const [tempName, setTempName] = useState(name);
   const [tempPhone, setTempPhone] = useState(phone);
 
@@ -166,12 +167,16 @@ export default function AccountScreen() {
             </TouchableOpacity>
         </Link>
 
-        <Link href="/login" asChild>
-            <TouchableOpacity style={styles.logoutButton}>
-                <Ionicons name="log-out-outline" size={24} color="red" />
-                <Text style={styles.logoutButtonText}>Logout</Text>
-            </TouchableOpacity>
-        </Link>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={async () => {
+            await logout();
+            router.replace('/login');
+          }}
+        >
+          <Ionicons name="log-out-outline" size={24} color="red" />
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
         </ScrollView>
         <Modal
             animationType="fade"

@@ -1,11 +1,12 @@
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { supabase } from '@/supabaseClient';
-import { Session } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type SessionContextType = {
-  session: Session | null;
+  isLoggedIn: boolean;
   isLoading: boolean;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -19,26 +20,44 @@ export function useSession() {
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsLoading(false);
-    });
+    const loadLoginState = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('paymart:isLoggedIn');
+        setIsLoggedIn(stored === 'true');
+      } catch (error) {
+        console.warn('Failed to load login state', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    loadLoginState();
   }, []);
 
+  const login = async () => {
+    try {
+      setIsLoggedIn(true);
+      await AsyncStorage.setItem('paymart:isLoggedIn', 'true');
+    } catch (error) {
+      console.warn('Failed to save login state', error);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      setIsLoggedIn(false);
+      await AsyncStorage.removeItem('paymart:isLoggedIn');
+    } catch (error) {
+      console.warn('Failed to clear login state', error);
+    }
+  };
+
   return (
-    <SessionContext.Provider value={{ session, isLoading }}>
+    <SessionContext.Provider value={{ isLoggedIn, isLoading, login, logout }}>
       {children}
     </SessionContext.Provider>
   );

@@ -1,16 +1,23 @@
 
-import { Tabs, Redirect } from 'expo-router';
-import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { HapticTab } from '@/components/haptic-tab';
-import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Redirect, Tabs } from 'expo-router';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useSession } from '../context/SessionProvider';
-import { Text } from 'react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { isLoggedIn, isLoading } = useSession();
+
+  if (isLoading) {
+    // You can customize a loading screen here if needed
+    return null;
+  }
+
+  if (!isLoggedIn) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <Tabs

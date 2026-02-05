@@ -122,7 +122,7 @@ export default function SignupScreen() {
         setToastType('success');
         router.replace('/login');
       } catch (error) {
-        setToastMessage('User already registered' || error.message);
+        setToastMessage(error.message || 'User already registered');
       }
     }
   };
