@@ -1,12 +1,13 @@
 
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Link, useRouter } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSession } from '../context/SessionProvider';
 import { supabase } from '../../supabaseClient';
+import { useSession } from '../context/SessionProvider';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
@@ -17,55 +18,98 @@ export default function AccountScreen() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [imageOptionsVisible, setImageOptionsVisible] = useState(false);
-  const { session, logout } = useSession();
+  const { isLoggedIn, logout } = useSession();
   const router = useRouter();
   const [tempName, setTempName] = useState(name);
   const [tempUsername, setTempUsername] = useState(username);
   const [tempPhone, setTempPhone] = useState(phone);
   const [tempEmail, setTempEmail] = useState(email);
   const [loading, setLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allUsersLoading, setAllUsersLoading] = useState(false);
+  const [allUsersError, setAllUsersError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (session) {
-      fetchProfile();
-    }
-  }, [session]);
-
-  const fetchProfile = async () => {
-    if (!session?.user?.phone_number) return;
-  
+  const fetchProfile = React.useCallback(async () => {
     setLoading(true);
     try {
+      const identifier = await AsyncStorage.getItem('paymart:loginIdentifier');
+
+      if (!identifier) {
+        Alert.alert('Session expired', 'Please login again');
+        await logout();
+        router.replace('/login');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('users')
         .select('full_name, username, phone_number, email')
-        .eq('phone_number', session.user.phone_number)
+        .or(`phone_number.eq.${identifier},email.eq.${identifier},username.eq.${identifier}`)
         .single();
-  
+
       if (error) {
         console.error('Error fetching profile:', error);
         Alert.alert('Error', 'Could not fetch profile');
         return;
       }
-  
-      setName(data.full_name || '');
-      setUsername(data.username || '');
-      setPhone(data.phone_number || '');
-      setEmail(data.email || '');
-  
-      setTempName(data.full_name || '');
-      setTempUsername(data.username || '');
-      setTempPhone(data.phone_number || '');
-      setTempEmail(data.email || '');
+
+      setName(data.full_name ?? '');
+      setUsername(data.username ?? '');
+      setPhone(data.phone_number ?? '');
+      setEmail(data.email ?? '');
+
+      setTempName(data.full_name ?? '');
+      setTempUsername(data.username ?? '');
+      setTempPhone(data.phone_number ?? '');
+      setTempEmail(data.email ?? '');
     } finally {
       setLoading(false);
     }
-  };
-  
+  }, [logout, router]);
+
+  const fetchAllUsers = React.useCallback(async () => {
+  setAllUsersLoading(true);
+  setAllUsersError(null);
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching all users:', error);
+      setAllUsersError('Could not fetch users');
+      return;
+    }
+
+    setAllUsers(data || []);
+  } catch (err) {
+    console.error('Unexpected error fetching all users:', err);
+    setAllUsersError('Unexpected error while fetching users');
+  } finally {
+    setAllUsersLoading(false);
+  }
+}, []);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchProfile();
+      fetchAllUsers();
+    }
+  }, [isLoggedIn, fetchProfile, fetchAllUsers]);
 
   const handleSave = async () => {
     setLoading(true);
     try {
+      const identifier = await AsyncStorage.getItem('paymart:loginIdentifier');
+
+      if (!identifier) {
+        Alert.alert('Session expired', 'Please login again');
+        await logout();
+        router.replace('/login');
+        return;
+      }
+
       const { error } = await supabase
         .from('users')
         .update({
@@ -74,13 +118,13 @@ export default function AccountScreen() {
           phone_number: tempPhone,
           email: tempEmail,
         })
-        .eq('phone_number', session.user.phone_number);
-  
+        .or(`phone_number.eq.${identifier},email.eq.${identifier},username.eq.${identifier}`);
+
       if (error) {
         Alert.alert('Error', 'Could not update profile');
         return;
       }
-  
+
       setName(tempName);
       setUsername(tempUsername);
       setPhone(tempPhone);
@@ -90,7 +134,7 @@ export default function AccountScreen() {
       setLoading(false);
     }
   };
-    
+ 
 
   const handleImagePress = () => {
     setImageOptionsVisible(true);
@@ -219,6 +263,34 @@ export default function AccountScreen() {
             <Text style={styles.totalOrdersText}>Total Orders</Text>
             <Text style={styles.totalOrdersValue}>0</Text>
             <Ionicons name="bag-outline" size={40} color="#6c63ff" style={styles.ordersIcon} />
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>All Users</Text>
+          </View>
+          {allUsersLoading ? (
+            <Text>Loading users...</Text>
+          ) : allUsersError ? (
+            <Text style={{ color: 'red' }}>{allUsersError}</Text>
+          ) : allUsers.length === 0 ? (
+            <Text>No users found.</Text>
+          ) : (
+            allUsers.map((u) => (
+              <View
+                key={u.id ?? u.phone_number ?? u.email ?? Math.random().toString()}
+                style={styles.infoRow}
+              >
+                <Ionicons name="person-outline" size={24} color="#ccc" />
+                <View style={styles.infoTextContainer}>
+                  <Text style={styles.infoValue}>{u.full_name || 'No name'}</Text>
+                  <Text style={styles.infoLabel}>
+                    {u.email || u.phone_number || 'No contact info'}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         <Link href="/order-history" asChild>

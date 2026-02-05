@@ -51,6 +51,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoggedIn(false);
       await AsyncStorage.removeItem('paymart:isLoggedIn');
+      await AsyncStorage.removeItem('paymart:loginIdentifier');
     } catch (error) {
       console.warn('Failed to clear login state', error);
     }

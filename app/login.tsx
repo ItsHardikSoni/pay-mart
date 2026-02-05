@@ -1,16 +1,17 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
 import LottieView from 'lottie-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { supabase } from '../supabaseClient';
 import { useSession } from './context/SessionProvider';
@@ -88,6 +89,7 @@ export default function LoginScreen() {
 
       setToastMessage('Login successful!');
       setToastType('success');
+      await AsyncStorage.setItem('paymart:loginIdentifier', loginIdentifier);
       await login();
       router.replace('/(tabs)');
 
