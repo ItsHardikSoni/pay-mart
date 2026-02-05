@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 type SessionContextType = {
   isLoggedIn: boolean;
   isLoading: boolean;
-  login: () => Promise<void>;
+  login: (username: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -26,8 +26,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadLoginState = async () => {
       try {
-        const stored = await AsyncStorage.getItem('paymart:isLoggedIn');
-        setIsLoggedIn(stored === 'true');
+        const storedIsLoggedIn = await AsyncStorage.getItem('paymart:isLoggedIn');
+        setIsLoggedIn(storedIsLoggedIn === 'true');
       } catch (error) {
         console.warn('Failed to load login state', error);
       } finally {

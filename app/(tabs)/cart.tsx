@@ -15,34 +15,45 @@ export default function CartScreen() {
   );
 
   const updateQuantity = (item: CartItem, newQuantity: number) => {
+    const itemIndex = cartState.items.findIndex(i => i.id === item.id && i.name === item.name);
+
+    if (itemIndex === -1) return;
+
     if (newQuantity > 0) {
-      item.quantity = newQuantity;
+      cartState.items[itemIndex].quantity = newQuantity;
     } else {
-      cartState.items = cartState.items.filter((i) => i.id !== item.id);
+      cartState.items.splice(itemIndex, 1);
     }
     setCartItems([...cartState.items]);
   };
 
-  const renderItem = ({ item }: { item: CartItem }) => (
-    <View style={styles.itemContainer}>
-      <View style={styles.itemDetails}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemPrice}>₹{item.price.toFixed(2)}</Text>
+  const renderItem = ({ item }: { item: CartItem }) => {
+    const itemPrice = (item as any).mrp ?? (item as any).price ?? 0;
+
+    return (
+      <View style={styles.itemContainer}>
+        <View style={styles.itemDetails}>
+          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemPrice}>₹{itemPrice.toFixed(2)}</Text>
+        </View>
+        <View style={styles.itemQuantityContainer}>
+          <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item, item.quantity - 1)}>
+            <Ionicons name="remove" size={22} color="#6c63ff" />
+          </TouchableOpacity>
+          <Text style={styles.itemQuantity}>{item.quantity}</Text>
+          <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item, item.quantity + 1)}>
+            <Ionicons name="add" size={22} color="#6c63ff" />
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.itemQuantityContainer}>
-        <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item, item.quantity - 1)}>
-          <Ionicons name="remove" size={22} color="#6c63ff" />
-        </TouchableOpacity>
-        <Text style={styles.itemQuantity}>{item.quantity}</Text>
-        <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item, item.quantity + 1)}>
-          <Ionicons name="add" size={22} color="#6c63ff" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  }
 
   const getTotal = () => {
-    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2);
+    return cartItems.reduce((total, item) => {
+        const itemPrice = (item as any).mrp ?? (item as any).price ?? 0;
+        return total + itemPrice * item.quantity;
+    }, 0).toFixed(2);
   };
 
   return (
@@ -68,7 +79,7 @@ export default function CartScreen() {
           <FlatList
             data={cartItems}
             renderItem={renderItem}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => `${item.id}-${item.name}-${index}`}
             contentContainerStyle={styles.list}
           />
           <View style={styles.footer}>

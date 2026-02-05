@@ -90,7 +90,7 @@ export default function LoginScreen() {
       setToastMessage('Login successful!');
       setToastType('success');
       await AsyncStorage.setItem('paymart:loginIdentifier', loginIdentifier);
-      await login();
+      await login(data.username, data.full_name);
       router.replace('/(tabs)');
 
     } catch (error) {

@@ -185,9 +185,9 @@ export default function ScanScreen() {
         }
 
         setSelectedProduct({
-          id: data.id,
+          id: data.id.toString(),
           barcode: data.barcode,
-          name: data.name,
+          name: data.name.trim(),
           mrp: Number(data.mrp),
           discount_rate: Number(data.discount_rate ?? 0),
           stock: Number(data.stock ?? 0),
@@ -218,15 +218,20 @@ export default function ScanScreen() {
       return;
     }
 
-    const existingItem = cartState.items.find((item) => item.id === selectedProduct.id);
+    const trimmedName = selectedProduct.name.trim();
+    const existingItem = cartState.items.find(
+      (item) =>
+        item.id === selectedProduct.id &&
+        item.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
 
     if (existingItem) {
       existingItem.quantity += qtyNumber;
     } else {
       cartState.items.push({
         id: selectedProduct.id,
-        name: selectedProduct.name,
-        price: selectedProduct.mrp,
+        name: trimmedName,
+        mrp: selectedProduct.mrp,
         quantity: qtyNumber,
       });
     }
