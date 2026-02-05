@@ -28,6 +28,10 @@ export default function AccountScreen() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [allUsersLoading, setAllUsersLoading] = useState(false);
   const [allUsersError, setAllUsersError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
 
   const fetchProfile = React.useCallback(async () => {
     setLoading(true);
@@ -99,6 +103,35 @@ export default function AccountScreen() {
   }, [isLoggedIn, fetchProfile, fetchAllUsers]);
 
   const handleSave = async () => {
+    // reset errors
+    setNameError('');
+    setUsernameError('');
+    setPhoneError('');
+    setEmailError('');
+
+    // required field validation
+    let hasError = false;
+    if (!tempName.trim()) {
+      setNameError('Name is required');
+      hasError = true;
+    }
+    if (!tempUsername.trim()) {
+      setUsernameError('Username is required');
+      hasError = true;
+    }
+    if (!tempPhone.trim()) {
+      setPhoneError('Phone number is required');
+      hasError = true;
+    }
+    if (!tempEmail.trim()) {
+      setEmailError('Email is required');
+      hasError = true;
+    }
+
+    if (hasError) {
+      return;
+    }
+
     setLoading(true);
     try {
       const identifier = await AsyncStorage.getItem('paymart:loginIdentifier');
@@ -108,6 +141,54 @@ export default function AccountScreen() {
         await logout();
         router.replace('/login');
         return;
+      }
+
+      // Check if username is already taken by someone else
+      if (tempUsername) {
+        const { count, error: usernameError } = await supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('username', tempUsername)
+          .neq('username', username);
+
+        if (usernameError) {
+          console.error('Error checking username uniqueness:', usernameError);
+        } else if ((count ?? 0) > 0) {
+          setUsernameError('Username already taken');
+          return;
+        }
+      }
+
+      // Check if phone number is already used by someone else
+      if (tempPhone && tempPhone !== phone) {
+        const { count: phoneCount, error: phoneCheckError } = await supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('phone_number', tempPhone)
+          .neq('phone_number', phone);
+
+        if (phoneCheckError) {
+          console.error('Error checking phone uniqueness:', phoneCheckError);
+        } else if ((phoneCount ?? 0) > 0) {
+          setPhoneError('Phone number already in used');
+          return;
+        }
+      }
+
+      // Check if email is already used by someone else
+      if (tempEmail && tempEmail !== email) {
+        const { count: emailCount, error: emailCheckError } = await supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('email', tempEmail)
+          .neq('email', email);
+
+        if (emailCheckError) {
+          console.error('Error checking email uniqueness:', emailCheckError);
+        } else if ((emailCount ?? 0) > 0) {
+          setEmailError('Email already in used');
+          return;
+        }
       }
 
       const { error } = await supabase
@@ -346,15 +427,22 @@ export default function AccountScreen() {
                             </View>
                             <Text style={styles.modalSubtitle}>Update your profile information</Text>
 
-                            <Text style={styles.inputLabel}>Name</Text>
+                            <Text style={styles.inputLabel}>
+                              Name<Text style={styles.required}> *</Text>
+                            </Text>
                             <TextInput
                                 style={styles.input}
                                 onChangeText={setTempName}
                                 value={tempName}
                                 placeholder="Enter your name"
                             />
+                            {!!nameError && (
+                              <Text style={styles.usernameError}>{nameError}</Text>
+                            )}
 
-                            <Text style={styles.inputLabel}>Username</Text>
+                            <Text style={styles.inputLabel}>
+                              Username<Text style={styles.required}> *</Text>
+                            </Text>
                             <TextInput
                                 style={styles.input}
                                 onChangeText={setTempUsername}
@@ -362,8 +450,13 @@ export default function AccountScreen() {
                                 placeholder="Enter your username"
                                 autoCapitalize="none"
                             />
+                            {!!usernameError && (
+                              <Text style={styles.usernameError}>{usernameError}</Text>
+                            )}
 
-                            <Text style={styles.inputLabel}>Phone</Text>
+                            <Text style={styles.inputLabel}>
+                              Phone<Text style={styles.required}> *</Text>
+                            </Text>
                             <TextInput
                                 style={styles.input}
                                 onChangeText={setTempPhone}
@@ -371,7 +464,12 @@ export default function AccountScreen() {
                                 placeholder="Enter your phone"
                                 keyboardType="phone-pad"
                             />
-                             <Text style={styles.inputLabel}>Email</Text>
+                            {!!phoneError && (
+                              <Text style={styles.usernameError}>{phoneError}</Text>
+                            )}
+                             <Text style={styles.inputLabel}>
+                               Email<Text style={styles.required}> *</Text>
+                             </Text>
                             <TextInput
                                 style={styles.input}
                                 onChangeText={setTempEmail}
@@ -379,6 +477,9 @@ export default function AccountScreen() {
                                 placeholder="Enter your email"
                                 keyboardType="email-address"
                             />
+                            {!!emailError && (
+                              <Text style={styles.usernameError}>{emailError}</Text>
+                            )}
 
                             <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
                                 <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Changes'}</Text>
@@ -597,12 +698,21 @@ const styles = StyleSheet.create({
       marginBottom: 5,
       color: '#333',
   },
+  required: {
+      color: 'red',
+  },
   input: {
       backgroundColor: '#f3f4f6',
       borderRadius: 10,
       padding: 12,
       marginBottom: 15,
       fontSize: 16,
+  },
+  usernameError: {
+      color: 'red',
+      fontSize: 12,
+      marginTop: -10,
+      marginBottom: 10,
   },
   saveButton: {
       backgroundColor: '#6c63ff',
