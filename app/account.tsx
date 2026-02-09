@@ -188,10 +188,6 @@ export default function AccountScreen() {
       ) : (
         <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: insets.bottom }}>
           <View style={styles.header}>
-            <Image 
-              source={{ uri: 'https://i.pravatar.cc/150?u=a042581f4e29026704d' }} // Dummy image
-              style={styles.avatar} 
-            />
             <Text style={styles.userName}>{name}</Text>
             <Text style={styles.userHandle}>@{username}</Text>
           </View>
@@ -237,7 +233,7 @@ export default function AccountScreen() {
               router.replace('/login');
             }}
           >
-            <Ionicons name="log-out-outline" size={24} color={Colors.danger} />
+            <Ionicons name="log-out-outline" size={24} />
             <Text style={styles.logoutButtonText}>Logout</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -307,14 +303,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
-    borderColor: 'white',
-    marginBottom: 10,
   },
   userName: {
     fontSize: 24,
@@ -404,7 +392,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   logoutButtonText: {
-    color: Colors.danger,
+    color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
