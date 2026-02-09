@@ -1,62 +1,48 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
+import { useSession } from '../context/SessionProvider';
+
+const QuickAction = ({ icon, label, screen }) => (
+  <Link href={screen} asChild>
+    <TouchableOpacity style={styles.quickAction}>
+      <Ionicons name={icon} size={30} color="#333" />
+      <Text style={styles.quickActionText}>{label}</Text>
+    </TouchableOpacity>
+  </Link>
+);
 
 export default function HomeScreen() {
+  const { fullName } = useSession();
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>Welcome back,</Text>
-        <Text style={styles.subHeaderText}>Shopper 👋</Text>
+        <Text style={styles.greeting}>Welcome back,</Text>
+        <Text style={styles.userName}>{fullName || 'Shopper'} 👋</Text>
       </View>
 
-      <View style={styles.scanAndPayContainer}>
-        <View style={styles.scanAndPayContent}>
-          <Ionicons name="scan-circle-outline" size={24} color="white" />
-          <View style={styles.scanAndPayTextContainer}>
-            <Text style={styles.scanAndPayTitle}>Scan & Pay - Skip the Queue</Text>
-            <Text style={styles.scanAndPaySubtitle}>Fast checkout, zero wait!</Text>
-          </View>
-        </View>
+      <View style={styles.promoBanner}>
+        <Text style={styles.promoText}>New! Try our Scan & Go service.</Text>
+        <Text style={styles.promoSubText}>Skip the checkout line and save time.</Text>
       </View>
 
-      <View style={styles.cardContainer}>
-        <View style={styles.card}>
-          <Ionicons name="cart-outline" size={32} color="#6c63ff" />
-          <Text style={styles.cardText}>0</Text>
-          <Text style={styles.cardSubText}>Items in Cart</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.rupeeIcon}>₹</Text>
-          <Text style={styles.cardText}>₹0.00</Text>
-          <Text style={styles.cardSubText}>Cart Amount</Text>
+      <View style={styles.quickActionsContainer}>
+        <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+        <View style={styles.quickActionsGrid}>
+          <QuickAction icon="scan-outline" label="Scan" screen="/scan" />
+          <QuickAction icon="search-outline" label="Search" screen="/search" />
+          <QuickAction icon="receipt-outline" label="Orders" screen="/order-history" />
+          <QuickAction icon="person-outline" label="Account" screen="/account" />
         </View>
       </View>
-
-      <TouchableOpacity style={styles.optionButton}>
-        <Ionicons name="cart" size={24} color="#6c63ff" />
-        <View>
-          <Text style={styles.optionButtonText}>View Cart</Text>
-          <Text style={styles.optionButtonSubText}>0 items • ₹0.00</Text>
-        </View>
-      </TouchableOpacity>
-
-      <Link href="/search" asChild>
-        <TouchableOpacity style={styles.optionButton}>
-          <Ionicons name="search" size={24} color="#6c63ff" />
-          <View>
-            <Text style={styles.optionButtonText}>Search Products</Text>
-            <Text style={styles.optionButtonSubText}>Browse and add manually</Text>
-          </View>
-        </TouchableOpacity>
-      </Link>
 
       <View style={styles.howItWorksContainer}>
         <Text style={styles.howItWorksTitle}>How it works</Text>
         <Text style={styles.howItWorksStep}>1. Scan product barcodes using your camera</Text>
         <Text style={styles.howItWorksStep}>2. Review items and proceed to checkout</Text>
-        <Text style={styles.howItWorksStep}>3. Pay online or at counter - it's that simple!</Text>
+        <Text style={styles.howItWorksStep}>3. Pay online or at the counter - it's that simple!</Text>
       </View>
     </ScrollView>
   );
@@ -65,80 +51,106 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#f8f9fa',
   },
   header: {
-    backgroundColor: '#6c63ff',
-    padding: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    backgroundColor: '#6A1B9A',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  headerText: {
-    fontSize: 24,
+  greeting: {
+    fontSize: 22,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#fff',
   },
-  subHeaderText: {
-    fontSize: 18,
-    color: 'white',
+  userName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
   },
-  scanAndPayContainer: {
+  promoBanner: {
+    backgroundColor: '#FFC107',
+    borderRadius: 15,
+    padding: 20,
     marginHorizontal: 20,
-    marginTop: 10,
-    backgroundColor: 'orange',
-    borderRadius: 15,
-    padding: 15,
-  },
-  scanAndPayContent: {
-    flexDirection: 'row',
+    marginTop: 20,
     alignItems: 'center',
   },
-  scanAndPayTextContainer: {
-    marginLeft: 10,
-  },
-  scanAndPayTitle: {
-    color: 'white',
+  promoText: {
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 16,
+    color: '#333',
   },
-  scanAndPaySubtitle: {
-    color: 'white',
+  promoSubText: {
     fontSize: 14,
+    color: '#333',
+    marginTop: 5,
   },
-  cardContainer: {
+  quickActionsContainer: {
+    marginHorizontal: 20,
+    marginTop: 20,
+  },
+  quickActionsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  quickActionsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 20,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
-  card: {
-    backgroundColor: 'white',
+  quickAction: {
+    backgroundColor: '#fff',
     borderRadius: 15,
     padding: 20,
     alignItems: 'center',
-    width: '40%',
+    width: '48%',
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 3,
   },
-  cardText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 5,
+  quickActionText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: '600',
   },
-  cardSubText: {
-    fontSize: 14,
+  recentActivityContainer: {
+    marginHorizontal: 20,
+    marginTop: 20,
+  },
+  recentActivityTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  recentActivityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  recentActivityText: {
+    marginLeft: 15,
+    fontSize: 16,
     color: 'gray',
   },
-  rupeeIcon: {
-    fontSize: 24,
-    color: '#6c63ff',
-  },
-  optionButton: {
+  helpContainer: {
     backgroundColor: 'white',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 15,
     borderRadius: 15,
     marginHorizontal: 20,
@@ -149,12 +161,12 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
   },
-  optionButtonText: {
+  helpText: {
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
   },
-  optionButtonSubText: {
+  helpSubText: {
     fontSize: 14,
     color: 'gray',
     marginLeft: 10,

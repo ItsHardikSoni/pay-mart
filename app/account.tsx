@@ -5,8 +5,8 @@ import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../../supabaseClient';
-import { useSession } from '../context/SessionProvider';
+import { supabase } from '../supabaseClient';
+import { useSession } from './context/SessionProvider';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();

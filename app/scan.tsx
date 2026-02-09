@@ -5,8 +5,8 @@ import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../../supabaseClient';
-import { cartState, CartItem } from '../cartState';
+import { supabase } from '../supabaseClient';
+import { cartState, CartItem } from './cartState';
 
 // Haversine formula to calculate distance between two coordinates
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -114,7 +114,7 @@ export default function ScanScreen() {
 
 
   async function playSound() {
-    const { sound } = await Audio.Sound.createAsync(require('../../assets/sounds/beep.mp3'));
+    const { sound } = await Audio.Sound.createAsync(require('../assets/sounds/beep.mp3'));
     setSound(sound);
     await sound.playAsync();
   }

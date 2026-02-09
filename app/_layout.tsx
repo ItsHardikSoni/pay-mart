@@ -53,6 +53,8 @@ export default function RootLayout() {
         <ThemeProvider value={theme}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="scan" options={{ headerShown: false }} />
+            <Stack.Screen name="account" options={{ headerShown: false }} />
             <Stack.Screen 
               name="search" 
               options={{ 
