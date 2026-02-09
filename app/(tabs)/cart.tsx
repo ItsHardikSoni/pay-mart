@@ -4,6 +4,7 @@ import { StyleSheet, View, Text, TouchableOpacity, FlatList, SafeAreaView } from
 import { Ionicons } from '@expo/vector-icons';
 import { cartState, CartItem } from '../cartState';
 import { router, useFocusEffect } from 'expo-router';
+import { Colors } from '../../constants/theme';
 
 export default function CartScreen() {
   const [cartItems, setCartItems] = useState(cartState.items);
@@ -38,11 +39,11 @@ export default function CartScreen() {
         </View>
         <View style={styles.itemQuantityContainer}>
           <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item, item.quantity - 1)}>
-            <Ionicons name="remove" size={22} color="#6c63ff" />
+            <Ionicons name="remove" size={22} color={Colors.light.primary} />
           </TouchableOpacity>
           <Text style={styles.itemQuantity}>{item.quantity}</Text>
           <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item, item.quantity + 1)}>
-            <Ionicons name="add" size={22} color="#6c63ff" />
+            <Ionicons name="add" size={22} color={Colors.light.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -70,7 +71,7 @@ export default function CartScreen() {
           <Ionicons name="cart-outline" size={100} color="#d0d0d0" />
           <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
           <Text style={styles.emptySubtitle}>Looks like you haven't added anything to your cart yet.</Text>
-          <TouchableOpacity style={styles.startButton} onPress={() => router.push('/(tabs)/scan')}>
+          <TouchableOpacity style={styles.startButton} onPress={() => router.push('/scan')}>
             <Text style={styles.startButtonText}>Start Shopping</Text>
           </TouchableOpacity>
         </View>
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   itemsBadge: {
-    backgroundColor: '#6c63ff',
+    backgroundColor: Colors.light.primary,
     borderRadius: 15,
     paddingVertical: 5,
     paddingHorizontal: 10,
@@ -147,12 +148,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   startButton: {
-    backgroundColor: '#6c63ff',
+    backgroundColor: Colors.light.primary,
     paddingVertical: 14,
     paddingHorizontal: 40,
     borderRadius: 30,
     marginTop: 30,
-    shadowColor: '#6c63ff',
+    shadowColor: Colors.light.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 15,
-    color: '#6c63ff',
+    color: Colors.light.primary,
     marginTop: 4,
     fontWeight: '500',
   },
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   checkoutButton: {
-    backgroundColor: '#6c63ff',
+    backgroundColor: Colors.light.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',

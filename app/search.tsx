@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient'; // Adjust the path as necessary
 import { cartState } from '../app/cartState';
 import * as Location from 'expo-location';
+import { Colors } from '../constants/theme';
 
 // Haversine formula to calculate distance between two coordinates
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -241,7 +242,7 @@ export default function SearchProducts() {
   }
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#0000ff" style={{ flex: 1, justifyContent: 'center' }} />;
+    return <ActivityIndicator size="large" color={Colors.light.primary} style={{ flex: 1, justifyContent: 'center' }} />;
   }
 
   if (error) {
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     color: 'gray',
   },
   addToCartButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: Colors.light.primary,
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 5,
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
       color: '#333'
   },
   goBackButton: {
-      backgroundColor: '#007BFF',
+      backgroundColor: Colors.light.primary,
       paddingHorizontal: 30,
       paddingVertical: 12,
       borderRadius: 8,

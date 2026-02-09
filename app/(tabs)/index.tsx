@@ -3,11 +3,12 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useSession } from '../context/SessionProvider';
+import { Colors } from '../../constants/theme';
 
 const QuickAction = ({ icon, label, screen }) => (
   <Link href={screen} asChild>
     <TouchableOpacity style={styles.quickAction}>
-      <Ionicons name={icon} size={30} color="#333" />
+      <Ionicons name={icon} size={30} color={Colors.light.primary} />
       <Text style={styles.quickActionText}>{label}</Text>
     </TouchableOpacity>
   </Link>
@@ -54,7 +55,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   header: {
-    backgroundColor: '#6A1B9A',
+    backgroundColor: Colors.light.primary,
     paddingVertical: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   promoBanner: {
-    backgroundColor: '#FFC107',
+    backgroundColor: Colors.light.secondary,
     borderRadius: 15,
     padding: 20,
     marginHorizontal: 20,
@@ -119,57 +120,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     fontWeight: '600',
-  },
-  recentActivityContainer: {
-    marginHorizontal: 20,
-    marginTop: 20,
-  },
-  recentActivityTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  recentActivityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  recentActivityText: {
-    marginLeft: 15,
-    fontSize: 16,
-    color: 'gray',
-  },
-  helpContainer: {
-    backgroundColor: 'white',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 15,
-    borderRadius: 15,
-    marginHorizontal: 20,
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  helpText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  helpSubText: {
-    fontSize: 14,
-    color: 'gray',
-    marginLeft: 10,
   },
   howItWorksContainer: {
     backgroundColor: 'white',
