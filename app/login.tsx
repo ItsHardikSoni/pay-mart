@@ -1,18 +1,20 @@
+
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
-import LottieView from 'lottie-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { Colors } from '../constants/theme';
 import { supabase } from '../supabaseClient';
 import { useSession } from './context/SessionProvider';
 
@@ -26,7 +28,6 @@ export default function LoginScreen() {
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const router = useRouter();
   const { isLoggedIn, isLoading, login } = useSession();
-  const animation = useRef(null);
 
   useEffect(() => {
     if (toastMessage) {
@@ -43,17 +44,13 @@ export default function LoginScreen() {
     }
   }, [isLoading, isLoggedIn, router]);
 
-  useEffect(() => {
-    animation.current?.play();
-  }, []);
-
   const validate = () => {
     let valid = true;
     setIdentifierError('');
     setPasswordError('');
 
     if (!loginIdentifier) {
-      setIdentifierError('Phone/Email/Username is required');
+      setIdentifierError('This field is required');
       valid = false;
     }
     if (!password) {
@@ -109,67 +106,68 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <View style={styles.logoContainer}>
-            <LottieView
-              ref={animation}
-              source={require('../assets/lottie/Profile_Icon.json')}
-              autoPlay={false}
-              loop={false}
-              style={styles.lottie}
-            />
-          <Text style={styles.title}>Pay Mart</Text>
-          <Text style={styles.subtitle}>Scan & Pay - Skip the queue</Text>
-        </View>
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+            <View style={styles.header}>
+                <Ionicons name="storefront-outline" size={80} color={Colors.light.primary} />
+                <Text style={styles.title}>Welcome Back!</Text>
+                <Text style={styles.subtitle}>Sign in to your Pay Mart account</Text>
+            </View>
 
-        <View style={styles.card}>
-          <Text style={styles.welcomeText}>Welcome Back</Text>
-          <Text style={styles.signInText}>Sign in to continue shopping</Text>
+            <View style={styles.formContainer}>
+              <View style={styles.inputGroup}>
+                <Ionicons name="person-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Username, Email, or Phone"
+                  value={loginIdentifier}
+                  onChangeText={setLoginIdentifier}
+                  autoCapitalize="none"
+                  placeholderTextColor={Colors.light.icon}
+                />
+              </View>
+              {!!identifierError && <Text style={styles.errorText}>{identifierError}</Text>}
 
-          <Text style={styles.label}>Phone/Email/Username <Text style={styles.required}>*</Text></Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your Phone/Email/Username"
-            value={loginIdentifier}
-            onChangeText={setLoginIdentifier}
-            autoCapitalize="none"
-          />
-          {!!identifierError && <Text style={styles.errorText}>{identifierError}</Text>}
+              <View style={styles.inputGroup}>
+                <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor={Colors.light.icon}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
+                </TouchableOpacity>
+              </View>
+              {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+              
+              <TouchableOpacity style={styles.forgotPasswordButton}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
 
+              <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+                <Text style={styles.signInButtonText}>Login</Text>
+              </TouchableOpacity>
 
-          <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-          {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+              <Text style={styles.orText}>or continue with</Text>
 
-
-          <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
-            <Text style={styles.signInButtonText}>Sign In</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
-            <FontAwesome name="google" size={20} color="white" />
-            <Text style={styles.googleButtonText}>Sign In with Google</Text>
-          </TouchableOpacity>
-
-          <Link href="/signup" asChild>
-            <TouchableOpacity>
-              <Text style={styles.signUpText}>
-                Don't have an account? <Text style={{fontWeight: 'bold', color: '#6c63ff'}}>Sign up
-                </Text>
-              </Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
+              <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
+                <FontAwesome name="google" size={20} color="#DB4437" />
+                <Text style={styles.googleButtonText}>Sign In with Google</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <Link href="/signup" asChild>
+                  <TouchableOpacity>
+                    <Text style={styles.signUpLink}>Sign up</Text>
+                  </TouchableOpacity>
+              </Link>
+            </View>
+        </ScrollView>
 
         {!!toastMessage && (
           <View style={[styles.toast, toastType === 'success' ? styles.successToast : styles.errorToast]}>
@@ -184,113 +182,123 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: '#f8f9fa',
   },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
-  logoContainer: {
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  header: {
     alignItems: 'center',
     marginBottom: 40,
   },
-  lottie: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
-  },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.light.primary,
+    marginTop: 20,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
-    marginTop: 5,
+    color: Colors.light.icon,
+    marginTop: 8,
   },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
+  formContainer: {
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  signInText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
-  },
-  required: {
-    color: 'red',
-  },
-  input: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 5,
-    fontSize: 16,
-  },
-  passwordContainer: {
+  inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    paddingRight: 15,
-    marginBottom: 5,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  passwordInput: {
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
     flex: 1,
-    padding: 15,
+    height: 55,
     fontSize: 16,
+    color: Colors.light.text,
+  },
+  eyeIcon: {
+      padding: 8,
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginTop: 12,
+  },
+  forgotPasswordText: {
+    color: Colors.light.primary,
+    fontSize: 14,
+    fontWeight: '500',
   },
   signInButton: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: Colors.light.primary,
+    borderRadius: 12,
+    paddingVertical: 18,
     alignItems: 'center',
-    marginTop: 15,
-    marginBottom: 10,
+    marginTop: 24,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   signInButtonText: {
-    color: 'white',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
   },
+  orText: {
+      textAlign: 'center',
+      marginVertical: 24,
+      color: Colors.light.icon,
+      fontSize: 14,
+  },
   googleButton: {
-    backgroundColor: '#4285F4',
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 18,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   googleButtonText: {
-    color: 'white',
+    color: Colors.light.text,
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 10,
+    marginLeft: 12,
   },
-  signUpText: {
-    textAlign: 'center',
-    color: '#666',
+  footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 30,
+  },
+  footerText: {
+      fontSize: 14,
+      color: Colors.light.icon,
+  },
+  signUpLink: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
   },
   toast: {
     position: 'absolute',
@@ -311,8 +319,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorText: {
-    color: 'red',
+    color: Colors.danger,
     fontSize: 12,
-    marginBottom: 10,
+    marginTop: 4,
+    marginLeft: 12,
   },
 });

@@ -1,7 +1,6 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import LottieView from 'lottie-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Colors } from '../constants/theme';
 import { supabase } from '../supabaseClient';
 
 export default function SignupScreen() {
@@ -33,11 +33,6 @@ export default function SignupScreen() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const router = useRouter();
-  const animation = useRef(null);
-
-  useEffect(() => {
-    animation.current?.play();
-  }, []);
 
   useEffect(() => {
     if (toastMessage) {
@@ -160,117 +155,123 @@ export default function SignupScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        style={styles.container}
       >
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.logoContainer}>
-            <LottieView
-              ref={animation}
-              source={require('../assets/lottie/Profile_Icon.json')}
-              autoPlay={false}
-              loop={false}
-              style={styles.lottie}
-            />
-            <Text style={styles.title}>Smart Scan & Pay</Text>
-            <Text style={styles.subtitle}>Skip the queue, shop smart</Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.welcomeText}>Create Account</Text>
-            <Text style={styles.signInText}>Sign up to start shopping</Text>
-            
-            <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your name"
-              value={fullName}
-              onChangeText={setFullName}
-            />
-            {!!fullNameError && <Text style={styles.errorText}>{fullNameError}</Text>}
-
-            <Text style={styles.label}>Username <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Choose a username"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-            />
-            {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
-
-            <Text style={styles.label}>Phone Number <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your phone"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              keyboardType="phone-pad"
-              maxLength={10}
-            />
-            {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
-
-            <Text style={styles.label}>Email <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
-
-            <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Enter your password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#666" />
-              </TouchableOpacity>
+          <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+            <View style={styles.header}>
+                <Ionicons name="person-add-outline" size={80} color={Colors.light.primary} />
+                <Text style={styles.title}>Create an Account</Text>
+                <Text style={styles.subtitle}>Start your journey with Pay Mart</Text>
             </View>
-            {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
 
-            <Text style={styles.label}>Confirm Password <Text style={styles.required}>*</Text></Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-              />
-              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={24} color="#666" />
-              </TouchableOpacity>
+            <View style={styles.formContainer}>
+                <View style={styles.inputGroup}>
+                    <Ionicons name="person-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Full Name"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholderTextColor={Colors.light.icon}
+                    />
+                </View>
+                {!!fullNameError && <Text style={styles.errorText}>{fullNameError}</Text>}
+
+                <View style={styles.inputGroup}>
+                    <Ionicons name="at-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Username"
+                    value={username}
+                    onChangeText={setUsername}
+                    autoCapitalize="none"
+                    placeholderTextColor={Colors.light.icon}
+                    />
+                </View>
+                {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
+
+                <View style={styles.inputGroup}>
+                    <Ionicons name="call-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Phone Number"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    placeholderTextColor={Colors.light.icon}
+                    />
+                </View>
+                {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
+
+                <View style={styles.inputGroup}>
+                    <Ionicons name="mail-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor={Colors.light.icon}
+                    />
+                </View>
+                {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
+
+                <View style={styles.inputGroup}>
+                    <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Password"
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry={!showPassword}
+                        placeholderTextColor={Colors.light.icon}
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
+                    </TouchableOpacity>
+                </View>
+                {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+
+                <View style={styles.inputGroup}>
+                    <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Confirm Password"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry={!showConfirmPassword}
+                        placeholderTextColor={Colors.light.icon}
+                    />
+                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                        <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
+                    </TouchableOpacity>
+                </View>
+                {!!confirmPasswordError && <Text style={styles.errorText}>{confirmPasswordError}</Text>}
+
+                <TouchableOpacity style={styles.signInButton} onPress={handleSignUp}>
+                    <Text style={styles.signInButtonText}>Sign Up</Text>
+                </TouchableOpacity>
+
+                <Text style={styles.orText}>or continue with</Text>
+
+                <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
+                    <FontAwesome name="google" size={20} color="#DB4437" />
+                    <Text style={styles.googleButtonText}>Sign Up with Google</Text>
+                </TouchableOpacity>
             </View>
-            {!!confirmPasswordError && <Text style={styles.errorText}>{confirmPasswordError}</Text>}
+            <View style={styles.footer}>
+                <Text style={styles.footerText}>Already have an account? </Text>
+                <Link href="/login" asChild>
+                    <TouchableOpacity>
+                        <Text style={styles.signInLink}>Sign in</Text>
+                    </TouchableOpacity>
+                </Link>
+            </View>
+          </ScrollView>
+          
 
-            <TouchableOpacity style={styles.signInButton} onPress={handleSignUp}>
-              <Text style={styles.signInButtonText}>Sign Up</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
-              <FontAwesome name="google" size={20} color="white" />
-              <Text style={styles.googleButtonText}>Sign Up with Google</Text>
-            </TouchableOpacity>
-
-            <Link href="/login" asChild>
-              <TouchableOpacity>
-                <Text style={styles.signUpText}>
-                  Already have an account? <Text style={{fontWeight: 'bold', color: '#6c63ff'}}>Sign in</Text>
-                </Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </ScrollView>
         {!!toastMessage && (
           <View style={[styles.toast, toastType === 'success' ? styles.successToast : styles.errorToast]}>
             <Text style={styles.toastText}>{toastMessage}</Text>
@@ -284,117 +285,115 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: '#f8f9fa',
   },
   container: {
+    flex: 1,
+  },
+  scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
-  logoContainer: {
+  header: {
     alignItems: 'center',
     marginBottom: 40,
-  },
-  lottie: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
+    marginTop: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.light.primary,
+    marginTop: 20,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
-    marginTop: 5,
+    color: Colors.light.icon,
+    marginTop: 8,
   },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
+  formContainer: {
     width: '100%',
+  },
+  inputGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  signInText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    paddingRight: 15,
-    marginBottom: 15,
-  },
-  passwordInput: {
     flex: 1,
-    padding: 15,
+    height: 55,
     fontSize: 16,
+    color: Colors.light.text,
+  },
+  eyeIcon: {
+      padding: 8,
   },
   signInButton: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: Colors.light.primary,
+    borderRadius: 12,
+    paddingVertical: 18,
     alignItems: 'center',
-    marginBottom: 20,
+    marginTop: 24,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   signInButtonText: {
-    color: 'white',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
+  },
+  orText: {
+      textAlign: 'center',
+      marginVertical: 24,
+      color: Colors.light.icon,
+      fontSize: 14,
   },
   googleButton: {
-    backgroundColor: '#4285F4',
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 18,
     alignItems: 'center',
-    marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   googleButtonText: {
-    color: 'white',
+    color: Colors.light.text,
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 10,
+    marginLeft: 12,
   },
-  signUpText: {
-    textAlign: 'center',
-    color: '#666',
+  footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 30,
   },
-  required: {
-    color: 'red',
+  footerText: {
+      fontSize: 14,
+      color: Colors.light.icon,
   },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginBottom: 10,
+  signInLink: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
   },
   toast: {
     position: 'absolute',
@@ -413,5 +412,11 @@ const styles = StyleSheet.create({
   toastText: {
     color: 'white',
     textAlign: 'center',
+  },
+  errorText: {
+    color: Colors.danger,
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 12,
   },
 });

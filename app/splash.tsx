@@ -1,7 +1,8 @@
-
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import LottieView from 'lottie-react-native';
+import { Colors } from '../constants/theme';
+
 
 export default function SplashScreen() {
 
@@ -12,6 +13,16 @@ export default function SplashScreen() {
             autoPlay
             loop
             style={styles.lottie}
+            colorFilters={[
+                {
+                  keypath: "Bar",
+                  color: Colors.light.primary,
+                },
+                {
+                  keypath: "Shape Layer 3",
+                  color: Colors.light.primary,
+                },
+            ]}
         />
         <View style={styles.textContainer}>
             <Text style={styles.appName}>Pay Mart</Text>
@@ -44,17 +55,17 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#6c63ff',
+    color: Colors.light.primary,
     marginTop: 20,
   },
   tagline: {
     fontSize: 22,
-    color: '#333',
+    color: Colors.light.primary,
     marginTop: 10,
   },
   subTagline: {
     fontSize: 16,
-    color: '#666',
+    color: Colors.light.primary,
     marginTop: 5,
   },
 });
