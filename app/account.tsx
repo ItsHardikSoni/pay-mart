@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../supabaseClient';
-import { useSession } from './context/SessionProvider';
+import { useSession } from '../context/SessionProvider';
 import { Colors } from '../constants/theme';
 
 export default function AccountScreen() {

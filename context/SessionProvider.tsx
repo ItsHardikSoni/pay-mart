@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 type SessionContextType = {
   isLoggedIn: boolean;
   isLoading: boolean;
+  fullName: string | null;
   login: (username: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -21,13 +22,16 @@ export function useSession() {
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [fullName, setFullName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadLoginState = async () => {
       try {
         const storedIsLoggedIn = await AsyncStorage.getItem('paymart:isLoggedIn');
+        const storedFullName = await AsyncStorage.getItem('paymart:fullName');
         setIsLoggedIn(storedIsLoggedIn === 'true');
+        setFullName(storedFullName);
       } catch (error) {
         console.warn('Failed to load login state', error);
       } finally {
@@ -38,10 +42,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     loadLoginState();
   }, []);
 
-  const login = async () => {
+  const login = async (username: string, fullName: string) => {
     try {
       setIsLoggedIn(true);
+      setFullName(fullName);
       await AsyncStorage.setItem('paymart:isLoggedIn', 'true');
+      await AsyncStorage.setItem('paymart:fullName', fullName);
     } catch (error) {
       console.warn('Failed to save login state', error);
     }
@@ -50,15 +56,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       setIsLoggedIn(false);
+      setFullName(null);
       await AsyncStorage.removeItem('paymart:isLoggedIn');
       await AsyncStorage.removeItem('paymart:loginIdentifier');
+      await AsyncStorage.removeItem('paymart:fullName');
     } catch (error) {
       console.warn('Failed to clear login state', error);
     }
   };
 
   return (
-    <SessionContext.Provider value={{ isLoggedIn, isLoading, login, logout }}>
+    <SessionContext.Provider value={{ isLoggedIn, isLoading, fullName, login, logout }}>
       {children}
     </SessionContext.Provider>
   );

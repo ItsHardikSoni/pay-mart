@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Colors } from '../constants/theme';
 import { supabase } from '../supabaseClient';
-import { useSession } from './context/SessionProvider';
+import { useSession } from '../context/SessionProvider';
 
 export default function LoginScreen() {
   const [loginIdentifier, setLoginIdentifier] = useState('');

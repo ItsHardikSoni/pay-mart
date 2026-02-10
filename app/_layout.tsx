@@ -9,7 +9,7 @@ import React, { useState, useEffect } from 'react';
 import SplashScreen from './splash';
 import * as Location from 'expo-location';
 import { Alert } from 'react-native';
-import { SessionProvider } from '@/app/context/SessionProvider';
+import { SessionProvider } from '../context/SessionProvider';
 
 export const unstable_settings = {
   anchor: '(tabs)',

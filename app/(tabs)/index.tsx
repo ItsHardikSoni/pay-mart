@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
-import { useSession } from '../context/SessionProvider';
+import { useSession } from '../../context/SessionProvider';
 import { Colors } from '../../constants/theme';
 
 const QuickAction = ({ icon, label, screen }) => (

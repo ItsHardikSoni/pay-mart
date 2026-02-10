@@ -4,14 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSession } from '../context/SessionProvider';
+import { useSession } from '../../context/SessionProvider';
 
-export default function TabLayout() {
+function TabLayoutContent() {
   const colorScheme = useColorScheme();
   const { isLoggedIn, isLoading } = useSession();
 
   if (isLoading) {
-    // You can customize a loading screen here if needed
     return null;
   }
 
@@ -66,26 +65,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="scan"
-        options={{
-          title: 'Scan',
-          tabBarIcon: ({ color }) => <Ionicons size={28} name="scan" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="cart"
         options={{
           title: 'Cart',
           tabBarIcon: ({ color }) => <Ionicons size={28} name="cart" color={color} />,
         }}
       />
-       <Tabs.Screen
-        name="account"
-        options={{
-          title: 'Account',
-          tabBarIcon: ({ color }) => <Ionicons size={28} name="person" color={color} />,
-        }}
-      />
     </Tabs>
   );
+}
+
+export default function TabLayout() {
+  return <TabLayoutContent />;
 }
