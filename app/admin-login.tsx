@@ -63,7 +63,7 @@ export default function AdminLoginScreen() {
 
   useEffect(() => {
     let locationSubscription: Location.LocationSubscription | undefined;
-    let serviceCheckInterval: NodeJS.Timeout | undefined;
+    let serviceCheckInterval: number | undefined; // Correct type for setInterval in RN
 
     const startLocationTracking = async () => {
       try {
@@ -207,6 +207,7 @@ export default function AdminLoginScreen() {
                 onChangeText={setPhoneNumber}
                 keyboardType="phone-pad"
                 autoCapitalize="none"
+                maxLength={10}
                 placeholderTextColor={Colors.light.icon}
               />
             </View>

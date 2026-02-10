@@ -137,17 +137,17 @@ export default function EditProductScreen() {
             ) : null}
 
             <Text style={styles.label}>Product Name</Text>
-            <TextInput style={styles.input} placeholder="Enter product name" value={name} onChangeText={setName} />
+            <TextInput style={styles.input} placeholder="Enter product name" value={name} onChangeText={setName} placeholderTextColor="#999" />
             
             <Text style={styles.label}>MRP</Text>
-            <TextInput style={styles.input} placeholder="Enter MRP" value={mrp} onChangeText={setMrp} keyboardType="numeric" />
+            <TextInput style={styles.input} placeholder="Enter MRP" value={mrp} onChangeText={setMrp} keyboardType="numeric" placeholderTextColor="#999" />
 
             <Text style={styles.label}>Stock</Text>
-            <TextInput style={styles.input} placeholder="Enter stock quantity" value={stock} onChangeText={setStock} keyboardType="numeric" />
+            <TextInput style={styles.input} placeholder="Enter stock quantity" value={stock} onChangeText={setStock} keyboardType="numeric" placeholderTextColor="#999" />
 
             <Text style={styles.label}>Barcode</Text>
             <View style={styles.barcodeContainer}>
-                <TextInput style={styles.barcodeInput} placeholder="Scan or enter barcode" value={barcode} onChangeText={setBarcode} keyboardType="numeric" />
+                <TextInput style={styles.barcodeInput} placeholder="Scan or enter barcode" value={barcode} onChangeText={setBarcode} keyboardType="numeric" placeholderTextColor="#999" />
                 <TouchableOpacity style={styles.scanButton} onPress={handleScanPress} disabled={!permission?.granted}>
                     <Ionicons name={isScannerVisible ? "close" : "scan-outline"} size={24} color="#fff" />
                 </TouchableOpacity>
@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     backgroundColor: '#fff',
+    color: '#333',
   },
   barcodeContainer: {
     flexDirection: 'row',
@@ -223,6 +224,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     backgroundColor: '#fff',
+    color: '#333',
   },
   scanButton: {
     marginLeft: 8,

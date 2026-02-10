@@ -70,7 +70,13 @@ export default function RootLayout() {
               <Stack.Screen name="signup" options={{ headerShown: false }} />
               <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
               <Stack.Screen name="admin-login" options={{ headerShown: false }} />
-              <Stack.Screen name="admin" options={{ headerShown: false }} />
+              <Stack.Screen 
+                name="admin" 
+                options={{ 
+                  headerShown: false,
+                  gestureEnabled: false 
+                }} 
+              />
             </Stack>
             <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           </ThemeProvider>
