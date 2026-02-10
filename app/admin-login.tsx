@@ -1,28 +1,53 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Link, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useState, useEffect } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { Colors } from '../constants/theme';
 import { supabase } from '../supabaseClient';
 
+// --- Location Configuration ---
+const ALLOWED_LOCATION = {
+  latitude: 25.610465587079343, // Griham Hostel
+  longitude: 85.05561450520987, 
+};
+const MAX_DISTANCE = 100; // in meters
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+  
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  
+    return R * c; // in metres
+}
+// -----------------------------
+
 export default function AdminLoginScreen() {
-  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
-  const [identifierError, setIdentifierError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [locationError, setLocationError] = useState<string | null>('Initializing location services...');
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const router = useRouter();
@@ -36,38 +61,81 @@ export default function AdminLoginScreen() {
     }
   }, [toastMessage]);
 
-  const validate = () => {
-    let valid = true;
-    setIdentifierError('');
-    setPasswordError('');
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | undefined;
+    let serviceCheckInterval: NodeJS.Timeout | undefined;
 
-    if (!loginIdentifier) {
-      setIdentifierError('This field is required');
-      valid = false;
-    } else if (!/^\d{10}$/.test(loginIdentifier)) {
-      setIdentifierError('Phone number must be 10 digits');
-      valid = false;
-    }
+    const startLocationTracking = async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLocationError('Permission to access location was denied.');
+          return;
+        }
 
-    if (!password) {
-      setPasswordError('Password is required');
-      valid = false;
-    } else {
-      const hasUpperCase = /[A-Z]/.test(password);
-      const hasLowerCase = /[a-z]/.test(password);
-      const hasDigit = /\d/.test(password);
-      const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-      if (!hasUpperCase || !hasLowerCase || !hasDigit || !hasSpecialChar) {
-        setPasswordError('Password must contain an uppercase letter, a lowercase letter, a digit, and a special character.');
-        valid = false;
+        // Main loop to check services and manage the watcher
+        serviceCheckInterval = setInterval(async () => {
+          const servicesEnabled = await Location.hasServicesEnabledAsync();
+          if (!servicesEnabled) {
+            setLocationError('Location services are disabled. Please enable them.');
+            // Stop watching if services are off
+            if (locationSubscription) {
+              locationSubscription.remove();
+              locationSubscription = undefined;
+            }
+            return;
+          }
+
+          // If services are on but we have no watcher, create one.
+          // This handles initial start and re-enabling services.
+          if (!locationSubscription) {
+            locationSubscription = await Location.watchPositionAsync(
+              { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 1 },
+              (newLocation) => {
+                setLocation(newLocation);
+                const distance = getDistance(newLocation.coords.latitude, newLocation.coords.longitude, ALLOWED_LOCATION.latitude, ALLOWED_LOCATION.longitude);
+                if (distance > MAX_DISTANCE) {
+                  setLocationError(`You are too far from the business location. (Distance: ${Math.round(distance)}m)`);
+                } else {
+                  setLocationError(null); // Location and distance are OK!
+                }
+              }
+            );
+          }
+        }, 1000); // Check every second
+
+      } catch (error) {
+        console.error("Location Setup Error:", error);
+        setLocationError('Failed to initialize location services.');
       }
+    };
+
+    startLocationTracking();
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+      if (serviceCheckInterval) {
+        clearInterval(serviceCheckInterval);
+      }
+    };
+  }, []);
+
+  const checkLocation = () => {
+    if (locationError) {
+      Alert.alert('Location Issue', locationError);
+      return false;
     }
+    if (!location) {
+      Alert.alert('Location Unavailable', 'Waiting for location data. Please ensure location services are enabled and try again shortly.');
+      return false;
+    }
+    return true; // The useEffect hook already handles distance checks
+  };
 
-    return valid;
-  }
-
-  const handleSignIn = async () => {
-    if (!validate()) {
+  const handleLogin = async () => {
+    if (!checkLocation()) {
       return;
     }
 
@@ -75,90 +143,99 @@ export default function AdminLoginScreen() {
       const { data, error } = await supabase
         .from('adminuser')
         .select('*')
-        .eq('phone_number', loginIdentifier)
+        .eq('phone_number', phoneNumber)
         .single();
 
-      if (error || !data) {
-        setToastMessage('Invalid credentials');
+      if (error || !data || data.password !== password) {
+        setToastMessage('Invalid phone number or password.');
         setToastType('error');
         return;
       }
-
-      if (data.password !== password) {
-        setToastMessage('Invalid credentials');
-        setToastType('error');
-        return;
-      }
-
+      
       setToastMessage('Login successful!');
       setToastType('success');
-      await AsyncStorage.setItem('paymart:adminLoggedIn', 'true');
-      router.replace('/admin');
+      
+      setTimeout(async () => {
+        await AsyncStorage.setItem('paymart:adminLoggedIn', 'true');
+        router.replace('/admin');
+      }, 3000);
 
-    } catch (error) {
-      setToastMessage(error.message || 'An unexpected error occurred.');
+    } catch (err) {
+      setToastMessage('An unexpected error occurred during login.');
       setToastType('error');
     }
   };
 
+  const LocationStatus = () => {
+    let icon: React.ComponentProps<typeof Ionicons>['name'] = 'location-sharp';
+    let color = Colors.light.success;
+    let text = 'Location OK';
+
+    if (locationError) {
+        icon = 'location-outline';
+        color = Colors.light.danger;
+        text = locationError;
+    }
+
+    return (
+        <View style={[styles.locationStatus, { backgroundColor: color }]}>
+            <Ionicons name={icon} size={16} color="#fff" />
+            <Text style={styles.locationText}>{text}</Text>
+        </View>
+    )
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-                <Ionicons name="shield-checkmark-outline" size={80} color={Colors.light.primary} />
-                <Text style={styles.title}>Admin Login</Text>
-                <Text style={styles.subtitle}>Sign in to the admin panel</Text>
+          <View style={styles.header}>
+            <Ionicons name="shield-checkmark-outline" size={80} color={Colors.light.primary} />
+            <Text style={styles.title}>Admin Access</Text>
+            <Text style={styles.subtitle}>Sign in to manage Pay Mart</Text>
+          </View>
+
+          <LocationStatus />
+
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Ionicons name="call-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Phone Number"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+                autoCapitalize="none"
+                placeholderTextColor={Colors.light.icon}
+              />
             </View>
 
-            <View style={styles.formContainer}>
-              <View style={styles.inputGroup}>
-                <Ionicons name="call-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Phone Number"
-                  value={loginIdentifier}
-                  onChangeText={setLoginIdentifier}
-                  autoCapitalize="none"
-                  keyboardType="phone-pad"
-                  placeholderTextColor={Colors.light.icon}
-                />
-              </View>
-              {!!identifierError && <Text style={styles.errorText}>{identifierError}</Text>}
-
-              <View style={styles.inputGroup}>
-                <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  placeholderTextColor={Colors.light.icon}
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
-                </TouchableOpacity>
-              </View>
-              {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
-
-              <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
-                <Text style={styles.signInButtonText}>Login</Text>
+            <View style={styles.inputGroup}>
+              <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholderTextColor={Colors.light.icon}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
               </TouchableOpacity>
             </View>
-            
-            <View style={styles.footer}>
-              <Link href="/login" asChild>
-                  <TouchableOpacity>
-                    <Text style={styles.signUpLink}>Back to User Login</Text>
-                  </TouchableOpacity>
-              </Link>
-            </View>
-        </ScrollView>
 
+            <TouchableOpacity style={styles.signInButton} onPress={handleLogin}>
+              <Text style={styles.signInButtonText}>Login</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/login')}>
+            <Ionicons name="arrow-back-outline" size={20} color={Colors.light.primary} />
+            <Text style={styles.backButtonText}>Back to User Login</Text>
+          </TouchableOpacity>
+        </ScrollView>
         {!!toastMessage && (
           <View style={[styles.toast, toastType === 'success' ? styles.successToast : styles.errorToast]}>
             <Text style={styles.toastText}>{toastMessage}</Text>
@@ -184,7 +261,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
     fontSize: 32,
@@ -199,6 +276,7 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+    marginTop: 20,
   },
   inputGroup: {
     flexDirection: 'row',
@@ -209,11 +287,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderWidth: 1,
     borderColor: '#ddd',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   inputIcon: {
     marginRight: 12,
@@ -225,7 +298,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   eyeIcon: {
-      padding: 8,
+    padding: 8,
   },
   signInButton: {
     backgroundColor: Colors.light.primary,
@@ -244,16 +317,31 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  footer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: 30,
+  backButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
   },
-  signUpLink: {
+  backButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
     color: Colors.light.primary,
+    marginLeft: 8,
+  },
+  locationStatus: {
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 8,
+    textAlign: 'center',
   },
   toast: {
     position: 'absolute',
@@ -272,11 +360,5 @@ const styles = StyleSheet.create({
   toastText: {
     color: 'white',
     textAlign: 'center',
-  },
-  errorText: {
-    color: Colors.danger,
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 12,
   },
 });

@@ -1,4 +1,3 @@
-
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
@@ -86,9 +85,11 @@ export default function LoginScreen() {
 
       setToastMessage('Login successful!');
       setToastType('success');
-      await AsyncStorage.setItem('paymart:loginIdentifier', loginIdentifier);
-      await login(data.username, data.full_name || '');
-      router.replace('/(tabs)');
+
+      setTimeout(async () => {
+        await AsyncStorage.setItem('paymart:loginIdentifier', loginIdentifier);
+        await login(data.username, data.full_name || '');
+      }, 3000);
 
     } catch (error: any) {
       setToastMessage(error.message || 'An unexpected error occurred.');

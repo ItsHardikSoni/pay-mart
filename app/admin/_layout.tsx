@@ -1,51 +1,156 @@
-import React, { useEffect } from 'react';
-import { Alert } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { Alert, AppState, Platform } from 'react-native';
 import { Tabs, useNavigation, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
+
+// --- Location Configuration ---
+const ALLOWED_LOCATION = {
+  latitude: 25.610465587079343, // Griham Hostel
+  longitude: 85.05561450520987, 
+};
+const MAX_DISTANCE = 100; // in meters
+
+// --- Helper function to calculate distance ---
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+  
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  
+    return R * c; // in metres
+}
 
 export default function AdminLayout() {
-  const navigation = useNavigation();
   const router = useRouter();
+  const navigation = useNavigation();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const appState = useRef(AppState.currentState);
 
+  // --- Back Button Logout Confirmation ---
   useEffect(() => {
-    const beforeRemoveListener = (e: any) => {
-      // Prevent default action
+    const backListener = navigation.addListener('beforeRemove', (e) => {
+      // Allow the event to bubble up if we are already logging out.
+      if (isLoggingOut) {
+        return;
+      }
+
+      // Prevent the default back action
       e.preventDefault();
 
-      // Show confirmation alert
+      // Ask for confirmation
       Alert.alert(
         'Logout Confirmation',
-        'Are you sure you want to log out from the admin panel?',
+        'Are you sure you want to logout from the admin panel?',
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => {} },
+          { text: "Cancel", style: 'cancel', onPress: () => {} },
           {
             text: 'Logout',
             style: 'destructive',
             onPress: async () => {
-              // To prevent a loop, we must remove the listener before navigating away.
-              navigation.removeListener('beforeRemove', beforeRemoveListener);
-
-              // Perform logout
+              setIsLoggingOut(true);
               await AsyncStorage.removeItem('paymart:adminLoggedIn');
-              
-              // Navigate to login screen
               router.replace('/admin-login');
             },
           },
         ]
       );
+    });
+
+    return backListener;
+  }, [navigation, isLoggingOut, router]);
+
+  // --- Automatic Security Logout Logic ---
+  const handleSecurityLogout = async (reason: string) => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+
+    Alert.alert(
+      'Security Logout',
+      reason,
+      [
+        {
+          text: 'OK',
+          onPress: async () => {
+            await AsyncStorage.removeItem('paymart:adminLoggedIn');
+            router.replace('/admin-login');
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  // --- Location and App State Monitoring ---
+  useEffect(() => {
+    if (isLoggingOut) return;
+
+    let locationSubscription: Location.LocationSubscription | undefined;
+    let serviceCheckInterval: NodeJS.Timeout | undefined;
+
+    const startMonitoring = async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          handleSecurityLogout('Location permission is required for admin access.');
+          return;
+        }
+
+        serviceCheckInterval = setInterval(async () => {
+            const enabled = await Location.hasServicesEnabledAsync();
+            if (!enabled) {
+                handleSecurityLogout('Location services were disabled.');
+                if (locationSubscription) {
+                    locationSubscription.remove();
+                    locationSubscription = undefined;
+                }
+            } else if (!locationSubscription) {
+                locationSubscription = await Location.watchPositionAsync(
+                    { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1, distanceInterval: 1 },
+                    (newLocation) => {
+                        const distance = getDistance(newLocation.coords.latitude, newLocation.coords.longitude, ALLOWED_LOCATION.latitude, ALLOWED_LOCATION.longitude);
+                        if (distance > MAX_DISTANCE) {
+                            handleSecurityLogout(`You have moved out of the allowed range (Distance: ${Math.round(distance)}m).`);
+                        }
+                    }
+                );
+            }
+        }, 1);
+
+      } catch (error) {
+        console.error("Location Monitoring Error:", error);
+        handleSecurityLogout('An unexpected error occurred with location services.');
+      }
     };
 
-    // Add the listener
-    navigation.addListener('beforeRemove', beforeRemoveListener);
+    startMonitoring();
+    
+    const handleAppStateChange = async (nextAppState: any) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        const enabled = await Location.hasServicesEnabledAsync();
+        if (!enabled) {
+          handleSecurityLogout('Location services were disabled upon returning to the app.');
+        }
+      }
+      appState.current = nextAppState;
+    };
 
-    // Return a cleanup function to remove the listener when the component unmounts
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
     return () => {
-      navigation.removeListener('beforeRemove', beforeRemoveListener);
+      if (locationSubscription) locationSubscription.remove();
+      if (serviceCheckInterval) clearInterval(serviceCheckInterval);
+      appStateSubscription.remove();
     };
-  }, [navigation, router]);
+  }, [isLoggingOut]);
 
   return (
     <Tabs
@@ -54,53 +159,40 @@ export default function AdminLayout() {
         tabBarInactiveTintColor: '#6B7280',
         tabBarStyle: {
           backgroundColor: '#fff',
-          borderTopWidth: 1,
-          borderTopColor: '#F1F5F9',
           height: 70,
           paddingBottom: 8,
           paddingTop: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 8,
-          elevation: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
-          marginTop: 4,
         },
         headerShown: false,
+        // This is a key change to make the back button behavior work correctly on iOS
+        ...(Platform.OS === 'ios' && { gestureEnabled: false }),
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Products',
-          tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
           title: 'Create',
-          tabBarIcon: ({ color, size }) => <Ionicons name="add-circle" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="add-circle-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="edit"
-        options={{
-          title: 'Edit',
-          tabBarIcon: ({ color, size }) => <Ionicons name="create" size={size} color={color} />,
-          href: null,
-        }}
-      />
-       <Tabs.Screen
         name="delete"
         options={{
           title: 'Delete',
-          tabBarIcon: ({ color, size }) => <Ionicons name="trash" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="trash-outline" size={size} color={color} />,
         }}
       />
+      <Tabs.Screen name="edit" options={{ href: null }} />
     </Tabs>
   );
 }

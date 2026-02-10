@@ -19,6 +19,8 @@ export const Colors = {
     tabIconSelected: tintColorLight,
     primary: AppColors.primary,
     secondary: AppColors.secondary,
+    success: AppColors.success,
+    danger: AppColors.danger,
   },
   dark: {
     text: '#ECEDEE',
