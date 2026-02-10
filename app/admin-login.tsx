@@ -1,5 +1,5 @@
 
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -16,9 +16,8 @@ import {
 } from 'react-native';
 import { Colors } from '../constants/theme';
 import { supabase } from '../supabaseClient';
-import { useSession } from '../context/SessionProvider';
 
-export default function LoginScreen() {
+export default function AdminLoginScreen() {
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [identifierError, setIdentifierError] = useState('');
@@ -27,7 +26,6 @@ export default function LoginScreen() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const router = useRouter();
-  const { isLoggedIn, isLoading, login } = useSession();
 
   useEffect(() => {
     if (toastMessage) {
@@ -38,12 +36,6 @@ export default function LoginScreen() {
     }
   }, [toastMessage]);
 
-  useEffect(() => {
-    if (!isLoading && isLoggedIn) {
-      router.replace('/(tabs)');
-    }
-  }, [isLoading, isLoggedIn, router]);
-
   const validate = () => {
     let valid = true;
     setIdentifierError('');
@@ -52,11 +44,25 @@ export default function LoginScreen() {
     if (!loginIdentifier) {
       setIdentifierError('This field is required');
       valid = false;
+    } else if (!/^\d{10}$/.test(loginIdentifier)) {
+      setIdentifierError('Phone number must be 10 digits');
+      valid = false;
     }
+
     if (!password) {
       setPasswordError('Password is required');
       valid = false;
+    } else {
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasDigit = /\d/.test(password);
+      const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+      if (!hasUpperCase || !hasLowerCase || !hasDigit || !hasSpecialChar) {
+        setPasswordError('Password must contain an uppercase letter, a lowercase letter, a digit, and a special character.');
+        valid = false;
+      }
     }
+
     return valid;
   }
 
@@ -67,9 +73,9 @@ export default function LoginScreen() {
 
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('adminuser')
         .select('*')
-        .or(`phone_number.eq.${loginIdentifier},email.eq.${loginIdentifier},username.eq.${loginIdentifier}`)
+        .eq('phone_number', loginIdentifier)
         .single();
 
       if (error || !data) {
@@ -86,18 +92,13 @@ export default function LoginScreen() {
 
       setToastMessage('Login successful!');
       setToastType('success');
-      await AsyncStorage.setItem('paymart:loginIdentifier', loginIdentifier);
-      await login(data.username, data.full_name || '');
-      router.replace('/(tabs)');
+      await AsyncStorage.setItem('paymart:adminLoggedIn', 'true');
+      router.replace('/admin');
 
-    } catch (error: any) {
+    } catch (error) {
       setToastMessage(error.message || 'An unexpected error occurred.');
       setToastType('error');
     }
-  };
-
-  const handleGoogleSignIn = () => {
-    console.log('Signing in with Google...');
   };
 
   return (
@@ -108,20 +109,21 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-                <Ionicons name="storefront-outline" size={80} color={Colors.light.primary} />
-                <Text style={styles.title}>Welcome Back!</Text>
-                <Text style={styles.subtitle}>Sign in to your Pay Mart account</Text>
+                <Ionicons name="shield-checkmark-outline" size={80} color={Colors.light.primary} />
+                <Text style={styles.title}>Admin Login</Text>
+                <Text style={styles.subtitle}>Sign in to the admin panel</Text>
             </View>
 
             <View style={styles.formContainer}>
               <View style={styles.inputGroup}>
-                <Ionicons name="person-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+                <Ionicons name="call-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Username, Email, or Phone"
+                  placeholder="Phone Number"
                   value={loginIdentifier}
                   onChangeText={setLoginIdentifier}
                   autoCapitalize="none"
+                  keyboardType="phone-pad"
                   placeholderTextColor={Colors.light.icon}
                 />
               </View>
@@ -142,36 +144,16 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
               {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
-              
-              <Link href="/forgot-password" asChild>
-                <TouchableOpacity style={styles.forgotPasswordButton}>
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              </Link>
 
               <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
                 <Text style={styles.signInButtonText}>Login</Text>
               </TouchableOpacity>
-              
-              <Link href="/admin-login" asChild>
-                <TouchableOpacity style={styles.adminButton}>
-                  <Text style={styles.adminButtonText}>Admin Panel</Text>
-                </TouchableOpacity>
-              </Link>
-
-              <Text style={styles.orText}>or continue with</Text>
-
-              <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
-                <FontAwesome name="google" size={20} color="#DB4437" />
-                <Text style={styles.googleButtonText}>Sign In with Google</Text>
-              </TouchableOpacity>
             </View>
             
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <Link href="/signup" asChild>
+              <Link href="/login" asChild>
                   <TouchableOpacity>
-                    <Text style={styles.signUpLink}>Sign up</Text>
+                    <Text style={styles.signUpLink}>Back to User Login</Text>
                   </TouchableOpacity>
               </Link>
             </View>
@@ -245,15 +227,6 @@ const styles = StyleSheet.create({
   eyeIcon: {
       padding: 8,
   },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginTop: 12,
-  },
-  forgotPasswordText: {
-    color: Colors.light.primary,
-    fontSize: 14,
-    fontWeight: '500',
-  },
   signInButton: {
     backgroundColor: Colors.light.primary,
     borderRadius: 12,
@@ -271,46 +244,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  adminButton: {
-    marginTop: 15,
-    alignItems: 'center',
-  },
-  adminButtonText: {
-    color: Colors.light.primary,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  orText: {
-      textAlign: 'center',
-      marginVertical: 24,
-      color: Colors.light.icon,
-      fontSize: 14,
-  },
-  googleButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 18,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  googleButtonText: {
-    color: Colors.light.text,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 12,
-  },
   footer: {
       flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
       marginTop: 30,
-  },
-  footerText: {
-      fontSize: 14,
-      color: Colors.light.icon,
   },
   signUpLink: {
     fontSize: 14,

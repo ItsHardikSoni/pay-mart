@@ -1,4 +1,6 @@
 
+import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -48,27 +50,32 @@ export default function RootLayout() {
   }
 
   return (
-    <SessionProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ThemeProvider value={theme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="scan" options={{ headerShown: false }} />
-            <Stack.Screen name="account" options={{ headerShown: false }} />
-            <Stack.Screen 
-              name="search" 
-              options={{ 
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen name="help-and-support" options={{ headerShown: false }} />
-            <Stack.Screen name="order-history" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="signup" options={{ headerShown: false }} />
-          </Stack>
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        </ThemeProvider>
-      </SafeAreaView>
-    </SessionProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SessionProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ThemeProvider value={theme}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="scan" options={{ headerShown: false }} />
+              <Stack.Screen name="account" options={{ headerShown: false }} />
+              <Stack.Screen 
+                name="search" 
+                options={{ 
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen name="help-and-support" options={{ headerShown: false }} />
+              <Stack.Screen name="order-history" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="signup" options={{ headerShown: false }} />
+              <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+              <Stack.Screen name="admin-login" options={{ headerShown: false }} />
+              <Stack.Screen name="admin" options={{ headerShown: false }} />
+            </Stack>
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          </ThemeProvider>
+        </SafeAreaView>
+      </SessionProvider>
+    </GestureHandlerRootView>
   );
 }

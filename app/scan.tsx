@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../supabaseClient';
 import { cartState } from './cartState';
 import { Colors } from '../constants/theme';
-import { useRouter } from 'expo-router';
+import { useRouter } from 'expo-router'; 
 
 // Haversine formula to calculate distance
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {

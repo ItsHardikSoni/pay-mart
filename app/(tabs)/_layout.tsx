@@ -5,6 +5,7 @@ import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSession } from '../../context/SessionProvider';
+import { Colors } from '../../constants/theme';
 
 function TabLayoutContent() {
   const colorScheme = useColorScheme();
@@ -21,7 +22,7 @@ function TabLayoutContent() {
   return (
     <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#6366F1',
+          tabBarActiveTintColor: Colors.light.primary,
           tabBarInactiveTintColor: '#6B7280',
           tabBarStyle: {
             backgroundColor: '#fff',
