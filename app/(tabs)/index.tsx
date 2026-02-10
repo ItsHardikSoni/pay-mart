@@ -1,9 +1,12 @@
-import React from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useSession } from '../../context/SessionProvider';
 import { Colors } from '../../constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../../supabaseClient';
 
 const QuickAction = ({ icon, label, screen }) => (
   <Link href={screen} asChild>
@@ -15,13 +18,46 @@ const QuickAction = ({ icon, label, screen }) => (
 );
 
 export default function HomeScreen() {
-  const { fullName } = useSession();
+  const { isLoggedIn, logout } = useSession();
+  const [fullName, setFullName] = useState('Shopper');
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const identifier = await AsyncStorage.getItem('paymart:loginIdentifier');
+        if (!identifier) {
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('users')
+          .select('full_name')
+          .or(`phone_number.eq.${identifier},email.eq.${identifier},username.eq.${identifier}`)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user name:', error);
+          return;
+        }
+
+        if (data?.full_name) {
+          setFullName(data.full_name);
+        }
+      } catch (e) {
+        console.error('Error loading user name:', e);
+      }
+    };
+
+    if (isLoggedIn) {
+        fetchUserName();
+    }
+  }, [isLoggedIn]);
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.greeting}>Welcome back,</Text>
-        <Text style={styles.userName}>{fullName || 'Shopper'} 👋</Text>
+        <Text style={styles.userName}>{fullName} 👋</Text>
       </View>
 
       <View style={styles.promoBanner}>

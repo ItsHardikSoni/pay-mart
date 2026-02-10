@@ -6,7 +6,7 @@ type SessionContextType = {
   isLoggedIn: boolean;
   isLoading: boolean;
   fullName: string | null;
-  login: (username: string, fullName: string) => Promise<void>;
+  login: (username: string, fullName: string | null) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -42,12 +42,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     loadLoginState();
   }, []);
 
-  const login = async (username: string, fullName: string) => {
+  const login = async (username: string, fullName: string | null) => {
     try {
       setIsLoggedIn(true);
       setFullName(fullName);
       await AsyncStorage.setItem('paymart:isLoggedIn', 'true');
-      await AsyncStorage.setItem('paymart:fullName', fullName);
+      if (fullName !== null && fullName !== undefined) {
+        await AsyncStorage.setItem('paymart:fullName', fullName);
+      } else {
+        await AsyncStorage.removeItem('paymart:fullName');
+      }
     } catch (error) {
       console.warn('Failed to save login state', error);
     }

@@ -314,6 +314,9 @@ const styles = StyleSheet.create({
   errorToast: {
     backgroundColor: '#F44336',
   },
+  errorToast: {
+    backgroundColor: '#F44336',
+  },
   toastText: {
     color: 'white',
     textAlign: 'center',
