@@ -1,7 +1,8 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient'; // Adjust the path as necessary
 import { cartState } from '../app/cartState';
 import * as Location from 'expo-location';
@@ -44,10 +45,22 @@ export default function SearchProducts() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState(cartState.items);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationError, setLocationError] = useState<string | null>('Initializing location...');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Cleanup timeout on unmount
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let locationSubscription: Location.LocationSubscription | undefined;
@@ -114,6 +127,44 @@ export default function SearchProducts() {
     };
   }, []);
 
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, mrp, stock');
+
+      if (error) throw error;
+
+      const products = (data || []).map((product: any) => ({
+        ...product,
+        id: Number(product.id),
+        name: product.name.trim(),
+        mrp: Number(product.mrp),
+        stock: Number(product.stock),
+      }));
+
+      setAllProducts(products);
+      if (searchQuery) {
+        const filteredData = products.filter((product) =>
+          product.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setFilteredProducts(filteredData);
+      } else {
+        setFilteredProducts(products);
+      }
+
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchProducts();
+    setRefreshing(false);
+  }, [searchQuery]);
 
   useFocusEffect(
     useCallback(() => {
@@ -123,31 +174,7 @@ export default function SearchProducts() {
 
   useEffect(() => {
     if (!locationError) {
-        const fetchProducts = async () => {
-          try {
-            const { data, error } = await supabase
-              .from('products')
-              .select('id, name, mrp, stock');
-    
-            if (error) throw error;
-    
-            const products = (data || []).map((product: any) => ({
-              ...product,
-              id: Number(product.id),
-              name: product.name.trim(),
-              mrp: Number(product.mrp),
-              stock: Number(product.stock),
-            }));
-    
-            setAllProducts(products);
-            setFilteredProducts(products);
-          } catch (e: any) {
-            setError(e.message);
-          } finally {
-            setLoading(false);
-          }
-        };
-    
+        setLoading(true);
         fetchProducts();
     }
   }, [locationError]);
@@ -181,7 +208,12 @@ export default function SearchProducts() {
   };
 
   const addToCart = (product: Product) => {
-     if (!location) {
+    if (product.stock === 0) {
+      Alert.alert('Out of Stock', 'This item is currently unavailable.');
+      return;
+    }
+
+    if (!location) {
       Alert.alert('Location', 'Cannot add to cart. Waiting for location data.');
       return;
     }
@@ -195,6 +227,10 @@ export default function SearchProducts() {
       Alert.alert('Out of Range', 'You are too far from the allowed area to add items to the cart.');
       return;
     }
+    
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
 
     const trimmedName = product.name.trim();
     const existingItem = cartState.items.find(
@@ -203,8 +239,10 @@ export default function SearchProducts() {
         item.name.trim().toLowerCase() === trimmedName.toLowerCase()
     );
 
+    let qtyNumber = 1;
     if (existingItem) {
       existingItem.quantity += 1;
+      qtyNumber = existingItem.quantity;
     } else {
       cartState.items.push({
         id: product.id.toString(),
@@ -214,6 +252,8 @@ export default function SearchProducts() {
       });
     }
     setCartItems([...cartState.items]);
+    setToastMessage(`${trimmedName} added to cart.`);
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 2500);
   };
 
   const renderProduct = ({ item }: { item: Product }) => (
@@ -223,9 +263,15 @@ export default function SearchProducts() {
         <Text style={styles.productDetails}>MRP: ${item.mrp.toFixed(2)}</Text>
         <Text style={styles.productDetails}>Stock: {item.stock}</Text>
       </View>
-      <TouchableOpacity style={styles.addToCartButton} onPress={() => addToCart(item)}>
-        <Text style={styles.addToCartButtonText}>Add to Cart</Text>
-      </TouchableOpacity>
+      {item.stock > 0 ? (
+        <TouchableOpacity style={styles.addToCartButton} onPress={() => addToCart(item)}>
+          <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={[styles.addToCartButton, styles.outOfStockButton]}>
+          <Text style={styles.addToCartButtonText}>Out of Stock</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -241,7 +287,7 @@ export default function SearchProducts() {
       )
   }
 
-  if (loading) {
+  if (loading && !refreshing) {
     return <ActivityIndicator size="large" color={Colors.light.primary} style={{ flex: 1, justifyContent: 'center' }} />;
   }
 
@@ -276,7 +322,19 @@ export default function SearchProducts() {
             <Text style={styles.tryDifferentText}>Try a different search term</Text>
           </View>
         }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.light.primary]}
+          />
+        }
       />
+      {toastMessage && (
+        <View style={styles.toastContainer}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -285,7 +343,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    padding: 20
+    padding: 20,
   },
   backButton: {
     flexDirection: 'row',
@@ -336,6 +394,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 5,
   },
+  outOfStockButton: {
+    backgroundColor: '#A9A9A9',
+  },
   addToCartButtonText: {
     color: '#fff',
     fontWeight: 'bold',
@@ -373,5 +434,22 @@ const styles = StyleSheet.create({
       color: '#fff',
       fontWeight: 'bold',
       fontSize: 16
-  }
+  },
+  toastContainer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toastText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
 });

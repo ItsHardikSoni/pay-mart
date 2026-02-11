@@ -271,13 +271,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   totalAmount: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
   },
   checkoutButton: {
     backgroundColor: Colors.light.primary,
-    padding: 16,
+    padding: 13,
     borderRadius: 12,
     alignItems: 'center',
   },
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   paymentOption: {
     backgroundColor: Colors.light.primary,
-    paddingVertical: 15,
+    paddingVertical: 13,
     paddingHorizontal: 20,
     borderRadius: 12,
     flexDirection: 'row',
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   },
   paymentOptionText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
 });
