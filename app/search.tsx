@@ -1,39 +1,13 @@
 
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../supabaseClient'; // Adjust the path as necessary
-import { cartState } from '../app/cartState';
-import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../supabaseClient';
 import { Colors } from '../constants/theme';
 
-// Haversine formula to calculate distance between two coordinates
-function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371e3; // metres
-  const φ1 = lat1 * Math.PI/180; // φ, λ in radians
-  const φ2 = lat2 * Math.PI/180;
-  const Δφ = (lat2-lat1) * Math.PI/180;
-  const Δλ = (lon2-lon1) * Math.PI/180;
-
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-          Math.cos(φ1) * Math.cos(φ2) *
-          Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  const d = R * c; // in metres
-  return d;
-}
-
-// Define the allowed location and radius
-const ALLOWED_LOCATION = {
-  latitude: 25.610465587079343, // Example: Griham Hostel
-  longitude: 85.05561450520987,
-};
-const MAX_DISTANCE = 100; // in meters
-
 interface Product {
-  id: number;
+  id: string; 
   name: string;
   mrp: number;
   stock: number;
@@ -47,87 +21,9 @@ export default function SearchProducts() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cartItems, setCartItems] = useState(cartState.items);
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [locationError, setLocationError] = useState<string | null>('Initializing location...');
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    // Cleanup timeout on unmount
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    let locationSubscription: Location.LocationSubscription | undefined;
-    let serviceCheckInterval: ReturnType<typeof setInterval> | undefined;
-
-    const startWatching = async () => {
-      try {
-        let { status } = await Location.getForegroundPermissionsAsync();
-        if (status !== 'granted') {
-            status = (await Location.requestForegroundPermissionsAsync()).status;
-        }
-        if (status !== 'granted') {
-            setLocationError('Location permission not granted. Please enable it in app settings.');
-            return;
-        }
-
-        const servicesEnabled = await Location.hasServicesEnabledAsync();
-        if (!servicesEnabled) {
-            setLocationError('Location services are disabled. Please enable them in your device settings to continue.');
-            return;
-        }
-        
-        setLocationError(null); // Clear initial message
-
-        locationSubscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.High,
-            timeInterval: 1000,
-            distanceInterval: 1,
-          },
-          (newLocation) => {
-            setLocation(newLocation);
-            setLocationError(null); 
-          }
-        );
-
-        serviceCheckInterval = setInterval(async () => {
-          const servicesStillEnabled = await Location.hasServicesEnabledAsync();
-          if (!servicesStillEnabled) {
-            setLocation(null);
-            setLocationError('Location services were disabled. Please re-enable them.');
-            if (locationSubscription) {
-              locationSubscription.remove();
-              locationSubscription = undefined;
-            }
-          }
-        }, 3000);
-
-      } catch (err) {
-        console.error('Location setup failed:', err);
-        setLocationError('Failed to start location tracking. Please ensure location is on and permissions are granted.');
-      }
-    };
-
-    startWatching();
-
-    return () => {
-      if (locationSubscription) {
-        locationSubscription.remove();
-      }
-      if (serviceCheckInterval) {
-        clearInterval(serviceCheckInterval);
-      }
-    };
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+    setError(null);
     try {
       const { data, error } = await supabase
         .from('products')
@@ -137,65 +33,33 @@ export default function SearchProducts() {
 
       const products = (data || []).map((product: any) => ({
         ...product,
-        id: Number(product.id),
+        id: product.id.toString(), // Ensure ID is a string
         name: product.name.trim(),
         mrp: Number(product.mrp),
         stock: Number(product.stock),
       }));
 
       setAllProducts(products);
-      if (searchQuery) {
-        const filteredData = products.filter((product) =>
-          product.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setFilteredProducts(filteredData);
-      } else {
-        setFilteredProducts(products);
-      }
+      setFilteredProducts(products); // Initially show all products
 
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchProducts();
     setRefreshing(false);
-  }, [searchQuery]);
-
-  useFocusEffect(
-    useCallback(() => {
-      setCartItems([...cartState.items]);
-    }, [])
-  );
-
-  useEffect(() => {
-    if (!locationError) {
-        setLoading(true);
-        fetchProducts();
-    }
-  }, [locationError]);
+  }, [fetchProducts]);
 
   const handleSearch = (query: string) => {
-    if (!location) {
-        Alert.alert('Location', 'Waiting for location data. Please ensure location services are on.');
-        return;
-    }
-    const distance = getDistance(
-      location.coords.latitude,
-      location.coords.longitude,
-      ALLOWED_LOCATION.latitude,
-      ALLOWED_LOCATION.longitude
-    );
-
-    if (distance > MAX_DISTANCE) {
-      Alert.alert('Out of Range', 'You are too far from the allowed area to search.');
-      return;
-    }
-
     setSearchQuery(query);
     if (query) {
       const filteredData = allProducts.filter((product) =>
@@ -207,92 +71,33 @@ export default function SearchProducts() {
     }
   };
 
-  const addToCart = (product: Product) => {
-    if (product.stock === 0) {
-      Alert.alert('Out of Stock', 'This item is currently unavailable.');
-      return;
-    }
-
-    if (!location) {
-      Alert.alert('Location', 'Cannot add to cart. Waiting for location data.');
-      return;
-    }
-    const distance = getDistance(
-      location.coords.latitude,
-      location.coords.longitude,
-      ALLOWED_LOCATION.latitude,
-      ALLOWED_LOCATION.longitude
-    );
-    if (distance > MAX_DISTANCE) {
-      Alert.alert('Out of Range', 'You are too far from the allowed area to add items to the cart.');
-      return;
-    }
-    
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    const trimmedName = product.name.trim();
-    const existingItem = cartState.items.find(
-      (item) =>
-        item.id === product.id.toString() &&
-        item.name.trim().toLowerCase() === trimmedName.toLowerCase()
-    );
-
-    let qtyNumber = 1;
-    if (existingItem) {
-      existingItem.quantity += 1;
-      qtyNumber = existingItem.quantity;
-    } else {
-      cartState.items.push({
-        id: product.id.toString(),
-        name: trimmedName,
-        mrp: product.mrp,
-        quantity: 1,
-      });
-    }
-    setCartItems([...cartState.items]);
-    setToastMessage(`${trimmedName} added to cart.`);
-    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 2500);
-  };
-
   const renderProduct = ({ item }: { item: Product }) => (
     <View style={styles.productContainer}>
-      <View>
+      <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.productDetails}>MRP: ${item.mrp.toFixed(2)}</Text>
-        <Text style={styles.productDetails}>Stock: {item.stock}</Text>
+        <Text style={styles.productDetails}>MRP: ₹{item.mrp.toFixed(2)}</Text>
       </View>
-      {item.stock > 0 ? (
-        <TouchableOpacity style={styles.addToCartButton} onPress={() => addToCart(item)}>
-          <Text style={styles.addToCartButtonText}>Add to Cart</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={[styles.addToCartButton, styles.outOfStockButton]}>
-          <Text style={styles.addToCartButtonText}>Out of Stock</Text>
-        </View>
-      )}
+      <View style={styles.stockInfo}>
+        <Text style={[styles.stockText, item.stock > 0 ? styles.inStock : styles.outOfStock]}>
+          {item.stock > 0 ? `In Stock: ${item.stock}` : 'Out of Stock'}
+        </Text>
+      </View>
     </View>
   );
-
-  if (locationError) {
-      return (
-          <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-              <Ionicons name="location-outline" size={80} color="#E0E0E0" />
-              <Text style={styles.errorText}>{locationError}</Text>
-              <TouchableOpacity onPress={() => router.back()} style={styles.goBackButton}>
-                  <Text style={styles.goBackButtonText}>Go Back</Text>
-              </TouchableOpacity>
-          </View>
-      )
-  }
 
   if (loading && !refreshing) {
     return <ActivityIndicator size="large" color={Colors.light.primary} style={{ flex: 1, justifyContent: 'center' }} />;
   }
 
   if (error) {
-    return <View style={styles.container}><Text>Error: {error}</Text></View>;
+    return (
+        <View style={styles.container}>
+            <Text style={styles.errorText}>Error: {error}</Text>
+            <TouchableOpacity onPress={fetchProducts} style={styles.goBackButton}>
+                <Text style={styles.goBackButtonText}>Try Again</Text>
+            </TouchableOpacity>
+        </View>
+    );
   }
 
   return (
@@ -308,13 +113,12 @@ export default function SearchProducts() {
           placeholder="Search by name..."
           value={searchQuery}
           onChangeText={handleSearch}
-          editable={!locationError && !!location}
-        />
+        /> 
       </View>
       <FlatList
         data={filteredProducts}
         renderItem={renderProduct}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
+        keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <View style={styles.noProducts}>
             <Ionicons name="search" size={90} color="#E0E0E0" />
@@ -330,11 +134,6 @@ export default function SearchProducts() {
           />
         }
       />
-      {toastMessage && (
-        <View style={styles.toastContainer}>
-          <Text style={styles.toastText}>{toastMessage}</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -380,76 +179,64 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
+  productInfo: {
+    flex: 1,
+  },
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
   productDetails: {
     fontSize: 14,
     color: 'gray',
   },
-  addToCartButton: {
-    backgroundColor: Colors.light.primary,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 5,
+  stockInfo: {
+    paddingLeft: 10,
   },
-  outOfStockButton: {
-    backgroundColor: '#A9A9A9',
-  },
-  addToCartButtonText: {
-    color: '#fff',
+  stockText: {
+    fontSize: 14,
     fontWeight: 'bold',
+  },
+  inStock: {
+    color: '#2E8B57', // SeaGreen
+  },
+  outOfStock: {
+    color: '#DC143C', // Crimson
   },
   noProducts: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50
+    marginTop: 50,
   },
   noProductsText: {
     marginTop: 20,
     fontSize: 18,
-    color: 'gray'
+    color: 'gray',
   },
   tryDifferentText: {
     marginTop: 5,
     fontSize: 14,
-    color: 'darkgray'
+    color: 'darkgray',
   },
   errorText: {
       fontSize: 16,
       textAlign: 'center',
       marginTop: 20,
       marginBottom: 20,
-      color: '#333'
+      color: '#DC143C'
   },
   goBackButton: {
       backgroundColor: Colors.light.primary,
       paddingHorizontal: 30,
       paddingVertical: 12,
       borderRadius: 8,
+      alignSelf: 'center',
   },
   goBackButtonText: {
       color: '#fff',
       fontWeight: 'bold',
       fontSize: 16
-  },
-  toastContainer: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toastText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
   },
 });

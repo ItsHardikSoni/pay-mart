@@ -4,12 +4,9 @@ export interface CartItem {
   name: string;
   mrp: number;
   quantity: number;
+  stock?: number;
 }
 
-interface CartState {
-  items: CartItem[];
-}
-
-export const cartState: CartState = {
-  items: [],
+export const cartState = {
+  items: [] as CartItem[],
 };

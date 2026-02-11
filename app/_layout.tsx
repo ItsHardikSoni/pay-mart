@@ -58,25 +58,15 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="scan" options={{ headerShown: false }} />
               <Stack.Screen name="account" options={{ headerShown: false }} />
-              <Stack.Screen 
-                name="search" 
-                options={{ 
-                  headerShown: false,
-                }} 
-              />
+              <Stack.Screen name="search" options={{ headerShown: false }} />
               <Stack.Screen name="help-and-support" options={{ headerShown: false }} />
               <Stack.Screen name="order-history" options={{ headerShown: false }} />
               <Stack.Screen name="login" options={{ headerShown: false }} />
               <Stack.Screen name="signup" options={{ headerShown: false }} />
               <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+              <Stack.Screen name="e-invoice" options={{ headerShown: false }} />
               <Stack.Screen name="admin-login" options={{ headerShown: false }} />
-              <Stack.Screen 
-                name="admin" 
-                options={{ 
-                  headerShown: false,
-                  gestureEnabled: false 
-                }} 
-              />
+              <Stack.Screen name="admin" options={{ headerShown: false, gestureEnabled: false }} />
             </Stack>
             <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           </ThemeProvider>

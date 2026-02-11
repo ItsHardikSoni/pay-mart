@@ -1,3 +1,4 @@
+
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
@@ -48,7 +49,7 @@ export default function ScanScreen() {
   const insets = useSafeAreaInsets();
   const [scanned, setScanned] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [sound, setSound] = useState<Audio.Sound>();
+  const soundRef = useRef<Audio.Sound | null>(null);
   const lineAnimation = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -57,6 +58,32 @@ export default function ScanScreen() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [productNotFoundError, setProductNotFoundError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const setupAudio = async () => {
+        try {
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: false,
+                playsInSilentModeIOS: true,
+                staysActiveInBackground: false,
+                shouldDuckAndroid: true,
+                playThroughEarpieceAndroid: false,
+            });
+            const { sound } = await Audio.Sound.createAsync(require('../assets/sounds/beep.mp3'));
+            soundRef.current = sound;
+        } catch (error) {
+            console.error('Failed to setup audio:', error);
+        }
+    };
+
+    setupAudio();
+
+    return () => {
+        if (soundRef.current) {
+            soundRef.current.unloadAsync();
+        }
+    };
+  }, []);
 
   useEffect(() => {
     let locationSubscription: Location.LocationSubscription | undefined;
@@ -119,15 +146,16 @@ export default function ScanScreen() {
     };
   }, []);
 
-  async function playSound() {
-    const { sound } = await Audio.Sound.createAsync(require('../assets/sounds/beep.mp3'));
-    setSound(sound);
-    await sound.playAsync();
-  }
+  const playSound = useCallback(async () => {
+    if (soundRef.current) {
+        try {
+            await soundRef.current.setStatusAsync({ shouldPlay: true, positionMillis: 0 });
+        } catch (error) {
+            console.error('Error playing sound:', error);
+        }
+    }
+  }, []);
 
-  useEffect(() => {
-    return sound ? () => { sound.unloadAsync(); } : undefined;
-  }, [sound]);
 
   const startLineAnimation = useCallback(() => {
     Animated.loop(Animated.sequence([
@@ -167,35 +195,55 @@ export default function ScanScreen() {
     if (!selectedProduct) return;
     const qtyNumber = parseInt(quantity, 10);
     if (isNaN(qtyNumber) || qtyNumber <= 0) {
-      Alert.alert('Invalid quantity', 'Please enter a valid quantity.');
-      return;
+        Alert.alert('Invalid quantity', 'Please enter a valid quantity.');
+        return;
     }
-    if (qtyNumber > selectedProduct.stock) {
-      Alert.alert('Stock Alert', 'Requested quantity exceeds available stock.');
-      return;
-    }
+
     const trimmedName = selectedProduct.name.trim();
     const existingItem = cartState.items.find(item => item.id === selectedProduct.id && item.name.trim().toLowerCase() === trimmedName.toLowerCase());
-    if (existingItem) {
-      existingItem.quantity += qtyNumber;
-    } else {
-      cartState.items.push({ id: selectedProduct.id, name: trimmedName, mrp: selectedProduct.mrp, quantity: qtyNumber });
+
+    const totalQuantity = (existingItem ? existingItem.quantity : 0) + qtyNumber;
+
+    if (totalQuantity > selectedProduct.stock) {
+        Alert.alert('Stock Alert', `You can only add ${selectedProduct.stock - (existingItem ? existingItem.quantity : 0)} more of this item.`);
+        return;
     }
+
+    if (existingItem) {
+        existingItem.quantity += qtyNumber;
+    } else {
+        cartState.items.push({ id: selectedProduct.id, name: trimmedName, mrp: selectedProduct.mrp, quantity: qtyNumber });
+    }
+
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastMessage(`${qtyNumber} x ${selectedProduct.name} added to cart.`);
     toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 2500);
+
     setSelectedProduct(null);
     setManualBarcode('');
   };
 
   const updateQuantity = (amount: number) => {
-    const currentQuantity = parseInt(quantity, 10);
-    const newQuantity = currentQuantity + amount;
+    if (!selectedProduct) return;
+    
+    const currentQuantity = parseInt(quantity, 10) || 0;
+    const existingItem = cartState.items.find(item => item.id === selectedProduct.id);
+    const alreadyInCart = existingItem ? existingItem.quantity : 0;
 
-    if (newQuantity > 0) {
-        setQuantity(String(newQuantity));
+    let newQuantity = currentQuantity + amount;
+
+    if (newQuantity < 1) {
+        newQuantity = 1;
     }
-};
+
+    if ((alreadyInCart + newQuantity) > selectedProduct.stock) {
+        newQuantity = selectedProduct.stock - alreadyInCart;
+        if (newQuantity < 1) newQuantity = 1; // Ensure we don't go below 1
+    }
+
+    setQuantity(String(newQuantity));
+  };
+
 
   const checkLocation = () => {
     if (locationError) {
@@ -226,13 +274,13 @@ export default function ScanScreen() {
     fetchProductByBarcode(data);
   };
 
-  const handleManualBarcodeSearch = () => {
+  const handleManualBarcodeSearch = async () => {
     if (!checkLocation()) return;
     if (manualBarcode.trim() === '') {
       Alert.alert('Empty Barcode', 'Please enter a barcode number.');
       return;
     }
-    playSound();
+    await playSound();
     fetchProductByBarcode(manualBarcode.trim());
   };
 
@@ -266,6 +314,14 @@ export default function ScanScreen() {
       </View>
     );
   }
+
+  const isIncreaseDisabled = () => {
+    if (!selectedProduct) return true;
+    const existingItem = cartState.items.find(item => item.id === selectedProduct.id);
+    const alreadyInCart = existingItem ? existingItem.quantity : 0;
+    const currentQuantity = parseInt(quantity, 10) || 0;
+    return (alreadyInCart + currentQuantity) >= selectedProduct.stock;
+  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -311,10 +367,11 @@ export default function ScanScreen() {
                         </TouchableOpacity>
                         <Text style={styles.quantityValue}>{quantity}</Text>
                         <TouchableOpacity
-                            style={styles.quantityButton}
+                            style={[styles.quantityButton, isIncreaseDisabled() && styles.disabledQuantityButton]}
                             onPress={() => updateQuantity(1)}
+                            disabled={isIncreaseDisabled()}
                         >
-                            <Ionicons name="add" size={22} color={Colors.light.primary} />
+                            <Ionicons name="add" size={22} color={isIncreaseDisabled() ? '#999' : Colors.light.primary} />
                         </TouchableOpacity>
                     </View>
                   </View>
@@ -382,6 +439,9 @@ const styles = StyleSheet.create({
       padding: 8,
       backgroundColor: '#f0f2f5',
       borderRadius: 20,
+  },
+  disabledQuantityButton: {
+    backgroundColor: '#e0e0e0',
   },
   quantityValue: {
       fontSize: 18,
