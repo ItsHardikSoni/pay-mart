@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, SafeAreaView } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, FlatList, SafeAreaView, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { cartState, CartItem } from '../cartState';
 import { router, useFocusEffect } from 'expo-router';
@@ -8,6 +8,7 @@ import { Colors } from '../../constants/theme';
 
 export default function CartScreen() {
   const [cartItems, setCartItems] = useState(cartState.items);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -57,6 +58,39 @@ export default function CartScreen() {
     }, 0).toFixed(2);
   };
 
+  const handleCheckout = () => {
+    setPaymentModalVisible(true);
+  };
+
+  const renderPaymentModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={paymentModalVisible}
+      onRequestClose={() => {
+        setPaymentModalVisible(!paymentModalVisible);
+      }}
+    >
+      <TouchableWithoutFeedback onPress={() => setPaymentModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Payment Method</Text>
+              <TouchableOpacity style={styles.paymentOption} onPress={() => console.log('Online Payment')}>
+                <Ionicons name="card-outline" size={24} color="white" style={styles.paymentOptionIcon} />
+                <Text style={styles.paymentOptionText}>Online Payment</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.paymentOption} onPress={() => console.log('Cash Payment')}>
+                <Ionicons name="cash-outline" size={24} color="white" style={styles.paymentOptionIcon} />
+                <Text style={styles.paymentOptionText}>Cash Payment</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -88,12 +122,13 @@ export default function CartScreen() {
                 <Text style={styles.totalText}>Total</Text>
                 <Text style={styles.totalAmount}>₹{getTotal()}</Text>
             </View>
-            <TouchableOpacity style={styles.checkoutButton}>
+            <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
               <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
             </TouchableOpacity>
           </View>
         </>
       )}
+      {renderPaymentModal()}
     </SafeAreaView>
   );
 }
@@ -250,5 +285,50 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 22,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 25,
+    textAlign: 'center',
+    color: '#333',
+  },
+  paymentOption: {
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  paymentOptionIcon: {
+    marginRight: 15,
+  },
+  paymentOptionText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
