@@ -1,23 +1,26 @@
 
+import NoInternetModal from '@/components/NoInternetModal';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import { Stack } from 'expo-router';
+import { usePreventScreenCapture } from 'expo-screen-capture';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import React, { useState, useEffect } from 'react';
-import SplashScreen from './splash';
-import * as Location from 'expo-location';
-import { Alert } from 'react-native';
 import { SessionProvider } from '../context/SessionProvider';
+import SplashScreen from './splash';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export default function RootLayout() {
+  usePreventScreenCapture(); // protect from screen capture
   const colorScheme = useColorScheme();
   const [isLoading, setIsLoading] = useState(true);
   const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
@@ -25,7 +28,7 @@ export default function RootLayout() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 5000); // Splash screen timeout
+    }, 3000); // Splash screen timeout
 
     return () => clearTimeout(timer);
   }, []);
@@ -51,7 +54,8 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SessionProvider>
+      <NoInternetModal />
+      <SessionProvider> 
         <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
           <ThemeProvider value={theme}>
             <Stack>

@@ -2,8 +2,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, Image } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../supabaseClient';
 import { useSession } from '../context/SessionProvider';
@@ -24,18 +24,20 @@ export default function AccountScreen() {
   const [tempEmail, setTempEmail] = useState(email);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [nameError, setNameError] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
 
-  const fetchProfile = React.useCallback(async () => {
-    setLoading(true);
+  const fetchProfile = useCallback(async (isRefreshing = false) => {
+    if (!isRefreshing) {
+      setLoading(true);
+    }
     try {
       const identifier = await AsyncStorage.getItem('paymart:loginIdentifier');
 
       if (!identifier) {
-        Alert.alert('Session expired', 'Please login again');
         await logout();
         router.replace('/login');
         return;
@@ -45,11 +47,20 @@ export default function AccountScreen() {
         .from('users')
         .select('full_name, username, phone_number, email')
         .or(`phone_number.eq.${identifier},email.eq.${identifier},username.eq.${identifier}`)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
-        Alert.alert('Error', 'Could not fetch profile');
+        Alert.alert('Error', 'Could not fetch profile. Please try again.');
+        await logout();
+        router.replace('/login');
+        return;
+      }
+
+      if (!data) {
+        Alert.alert('Session expired', 'User not found. Please login again.');
+        await logout();
+        router.replace('/login');
         return;
       }
 
@@ -58,16 +69,32 @@ export default function AccountScreen() {
       setPhone(data.phone_number ?? '');
       setEmail(data.email ?? '');
 
+    } catch (e) {
+        console.error('An unexpected error occurred in fetchProfile:', e);
+        Alert.alert('Error', 'An unexpected error occurred. Please login again.');
+        await logout();
+        router.replace('/login');
     } finally {
-      setLoading(false);
+      if (!isRefreshing) {
+        setLoading(false);
+      }
+      setRefreshing(false);
     }
   }, [logout, router]);
 
   useEffect(() => {
     if (isLoggedIn) {
       fetchProfile();
+    } else {
+      router.replace('/login');
+      setLoading(false);
     }
-  }, [isLoggedIn, fetchProfile]);
+  }, [isLoggedIn, fetchProfile, router]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchProfile(true);
+  }, [fetchProfile]);
   
   const openEditModal = () => {
     setTempName(name);
@@ -124,6 +151,7 @@ export default function AccountScreen() {
         if (usernameError) console.error('Error checking username uniqueness:', usernameError);
         else if ((count ?? 0) > 0) {
           setUsernameError('Username already taken');
+          setSaving(false);
           return;
         }
       }
@@ -133,6 +161,7 @@ export default function AccountScreen() {
         if (phoneCheckError) console.error('Error checking phone uniqueness:', phoneCheckError);
         else if ((phoneCount ?? 0) > 0) {
           setPhoneError('Phone number already in use');
+          setSaving(false);
           return;
         }
       }
@@ -142,6 +171,7 @@ export default function AccountScreen() {
         if (emailCheckError) console.error('Error checking email uniqueness:', emailCheckError);
         else if ((emailCount ?? 0) > 0) {
           setEmailError('Email already in use');
+          setSaving(false);
           return;
         }
       }
@@ -161,17 +191,29 @@ export default function AccountScreen() {
         return;
       }
 
+      if (tempUsername !== username) {
+        const { error: orderHistoryError } = await supabase
+          .from('order_history')
+          .update({ username: tempUsername })
+          .eq('username', username);
+
+        if (orderHistoryError) {
+          console.error('Error updating order history username:', orderHistoryError);
+        }
+      }
+
       setName(tempName);
       setUsername(tempUsername);
       setPhone(tempPhone);
       setEmail(tempEmail);
+      await AsyncStorage.setItem('paymart:loginIdentifier', tempUsername);
       setModalVisible(false);
     } finally {
       setSaving(false);
     }
   };
 
-  const InfoRow = ({ icon, label, value }) => (
+  const InfoRow = ({ icon, label, value }: { icon: keyof typeof Ionicons['glyphMap'], label: string, value: string }) => (
     <View style={styles.infoRow}>
       <Ionicons name={icon} size={20} color={Colors.light.primary} style={styles.infoIcon} />
       <View>
@@ -181,12 +223,21 @@ export default function AccountScreen() {
     </View>
   );
 
+  if (loading && !refreshing) {
+    return (
+      <View style={[styles.safeArea, styles.loader, {paddingTop: insets.top}]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.safeArea}>
-      {loading ? (
-        <ActivityIndicator size="large" color={Colors.light.primary} style={styles.loader} />
-      ) : (
-        <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: insets.bottom }}>
+    <View style={[styles.safeArea,]}>
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={{ paddingBottom: insets.bottom }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.light.primary]} />}
+        >
           <View style={styles.header}>
             <Text style={styles.userName}>{name}</Text>
             <Text style={styles.userHandle}>@{username}</Text>
@@ -233,11 +284,10 @@ export default function AccountScreen() {
               router.replace('/login');
             }}
           >
-            <Ionicons name="log-out-outline" size={24} />
+            <Ionicons name="log-out-outline" size={24} color='#FFF' />
             <Text style={styles.logoutButtonText}>Logout</Text>
           </TouchableOpacity>
         </ScrollView>
-      )}
       <Modal
         animationType="slide"
         transparent={true}
@@ -388,11 +438,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 20,
     marginBottom: 30,
-    backgroundColor: Colors.light.secondary,
+    backgroundColor: Colors.light.danger,
     borderRadius: 16,
   },
   logoutButtonText: {
-    color: '#000',
+    color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
@@ -427,7 +477,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   required: {
-    color: Colors.danger,
+    color: Colors.light.danger,
   },
   input: {
     backgroundColor: '#f8f9fa',
@@ -438,7 +488,7 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0'
   },
   errorText: {
-    color: Colors.danger,
+    color: Colors.light.danger,
     fontSize: 12,
     marginTop: 4,
   },

@@ -6,6 +6,8 @@ import { cartState, CartItem } from '../cartState';
 import { router, useFocusEffect } from 'expo-router';
 import { Colors } from '../../constants/theme';
 import { supabase } from '../../supabaseClient';
+import { useSession } from '../../context/SessionProvider';
+import RazorpayCheckout from 'react-native-razorpay';
 
 export default function CartScreen() {
   const [cartItems, setCartItems] = useState(cartState.items);
@@ -15,6 +17,7 @@ export default function CartScreen() {
   const [cashierPhone, setCashierPhone] = useState('');
   const [cashierName, setCashierName] = useState<string | null>(null);
   const [cashierData, setCashierData] = useState<any | null>(null);
+  const { username } = useSession();
 
   const sanitizeAndConsolidateCart = () => {
     const sanitizedItems: { [key: string]: CartItem } = {};
@@ -158,6 +161,10 @@ export default function CartScreen() {
     }, 0).toFixed(2);
   };
 
+  const getTotalQuantity = () => {
+    return cartItems.reduce((total, item) => total + item.quantity, 0);
+  };
+
   const handleCheckout = () => {
     setPaymentModalVisible(true);
   };
@@ -167,13 +174,8 @@ export default function CartScreen() {
     setCashierModalVisible(true);
   };
 
-  const handleCashierVerification = async () => {
-    if (!cashierData) {
-      Alert.alert('Error', 'Cashier not verified. Please check the details.');
-      return;
-    }
-
-    try {
+  const processOrder = async (paymentMode: 'Cash' | 'Online') => {
+     try {
       for (const item of cartItems) {
         const { data: product, error: fetchError } = await supabase
           .from('products')
@@ -190,25 +192,105 @@ export default function CartScreen() {
         if (updateError) throw new Error(`Failed to update stock for ${item.name}.`);
       }
 
-      const newPaymentCount = (cashierData.payment_count || 0) + 1;
-      await supabase.from('cashers').update({ payment_count: newPaymentCount }).eq('casher_id', cashierId);
-
       const processedCartItems = [...cartItems];
       const finalTotal = getTotal();
+
+      const order_number = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      const itemsToSave = processedCartItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        mrp: (item as any).mrp ?? (item as any).price ?? 0
+      }));
+
+      const { error: orderError } = await supabase.from('order_history').insert([
+        {
+          order_number,
+          username,
+          total_amount: parseFloat(finalTotal),
+          items: itemsToSave,
+          payment_mode: paymentMode,
+        },
+      ]);
+
+      if (orderError) {
+        throw new Error(`Failed to save order history: ${orderError.message}`);
+      }
 
       cartState.items = [];
       setCartItems([]);
       
-      setCashierModalVisible(false);
-      setCashierId('');
-      setCashierPhone('');
-      setCashierName(null);
-      setCashierData(null);
-
-      router.push({ pathname: '/e-invoice', params: { cart: JSON.stringify(processedCartItems), total: finalTotal } });
+      return { processedCartItems, finalTotal };
 
     } catch (e: any) {
       Alert.alert('Transaction Error', e.message || 'An unexpected error occurred.');
+      return null;
+    }
+  }
+
+  const handleRazorpayPayment = async () => {
+    const orderDetails = await processOrder('Online');
+    if (!orderDetails) return;
+
+    const { finalTotal, processedCartItems } = orderDetails;
+
+    const options = {
+        description: 'Your order from PayMart',
+        image: 'https://i.imgur.com/3g7nmJC.png',
+        currency: 'INR',
+        key: 'rzp_test_SE20E6seA1CZk4', // Replace with your actual key
+        amount: parseFloat(finalTotal) * 100,
+        name: 'PayMart',
+        order_id: '', // Optional
+        prefill: {
+            email: 'your_email@example.com', // Fetch from user session
+            contact: '9999999999', // Fetch from user session
+            name: username || 'Customer'
+        },
+        theme: { color: Colors.light.primary }
+    };
+
+    RazorpayCheckout.open(options).then((data) => {
+        Alert.alert('Success', `Payment successful: ${data.razorpay_payment_id}`);
+        setPaymentModalVisible(false);
+        router.push({
+            pathname: '/e-invoice',
+            params: {
+                cart: JSON.stringify(processedCartItems),
+                total: finalTotal,
+                paymentMode: 'Online'
+            }
+        });
+    }).catch((error) => {
+        Alert.alert('Error', `Payment failed: ${error.code} - ${error.description}`);
+    });
+  };
+
+  const handleCashierVerification = async () => {
+    if (!cashierData) {
+      Alert.alert('Error', 'Cashier not verified. Please check the details.');
+      return;
+    }
+
+    const result = await processOrder('Cash');
+    if (result) {
+        const newPaymentCount = (cashierData.payment_count || 0) + 1;
+        await supabase.from('cashers').update({ payment_count: newPaymentCount }).eq('casher_id', cashierId);
+
+        setCashierModalVisible(false);
+        setCashierId('');
+        setCashierPhone('');
+        setCashierData(null);
+
+        router.push({ 
+            pathname: '/e-invoice', 
+            params: { 
+                cart: JSON.stringify(result.processedCartItems), 
+                total: result.finalTotal, 
+                paymentMode: 'Cash',
+                cashierName: cashierName 
+            } 
+        });
+        setCashierName(null);
     }
   };
 
@@ -219,7 +301,7 @@ export default function CartScreen() {
           <TouchableWithoutFeedback>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Select Payment Method</Text>
-              <TouchableOpacity style={styles.paymentOption} onPress={() => console.log('Online Payment')}>
+              <TouchableOpacity style={styles.paymentOption} onPress={handleRazorpayPayment}>
                 <Ionicons name="card-outline" size={24} color="white" style={styles.paymentOptionIcon} />
                 <Text style={styles.paymentOptionText}>Online Payment</Text>
               </TouchableOpacity>
@@ -256,40 +338,42 @@ export default function CartScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Cart</Text>
-        <View style={styles.itemsBadge}>
-          <Text style={styles.itemsBadgeText}>{cartItems.length} items</Text>
+    <>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Cart</Text>
+          <View style={styles.itemsBadge}>
+            <Text style={styles.itemsBadgeText}>{getTotalQuantity()} items</Text>
+          </View>
         </View>
-      </View>
 
-      {cartItems.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="cart-outline" size={100} color="#d0d0d0" />
-          <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
-          <Text style={styles.emptySubtitle}>Looks like you haven't added anything to your cart yet.</Text>
-          <TouchableOpacity style={styles.startButton} onPress={() => router.push('/scan')}>
-            <Text style={styles.startButtonText}>Start Shopping</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          <FlatList data={cartItems} renderItem={renderItem} keyExtractor={(item) => item.id} contentContainerStyle={styles.list} />
-          <View style={styles.footer}>
-            <View style={styles.totalRow}>
-                <Text style={styles.totalText}>Total</Text>
-                <Text style={styles.totalAmount}>₹{getTotal()}</Text>
-            </View>
-            <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
-              <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+        {cartItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="cart-outline" size={100} color="#d0d0d0" />
+            <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
+            <Text style={styles.emptySubtitle}>Looks like you haven\'t added anything to your cart yet.</Text>
+            <TouchableOpacity style={styles.startButton} onPress={() => router.push('/scan')}>
+              <Text style={styles.startButtonText}>Start Shopping</Text>
             </TouchableOpacity>
           </View>
-        </>
-      )}
+        ) : (
+          <>
+            <FlatList data={cartItems} renderItem={renderItem} keyExtractor={(item) => item.id} contentContainerStyle={styles.list} />
+            <View style={styles.footer}>
+              <View style={styles.totalRow}>
+                  <Text style={styles.totalText}>Total ({getTotalQuantity()} items)</Text>
+                  <Text style={styles.totalAmount}>₹{getTotal()}</Text>
+              </View>
+              <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
+                <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </SafeAreaView>
       {renderPaymentModal()}
       {renderCashierModal()}
-    </SafeAreaView>
+    </>
   );
 }
 

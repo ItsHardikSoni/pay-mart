@@ -1,47 +1,48 @@
 {
   "expo": {
-    "name": "pay-mart",
+    "name": "Pay Mart",
     "slug": "pay-mart",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app.icon.jpeg",
     "scheme": "paymart",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "jsEngine": "jsc",
+      "jsEngine": "hermes",
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs access to your camera to scan product barcodes.",
         "NSMicrophoneUsageDescription": "This app does not require microphone access, but this permission is requested by the camera module.",
         "NSLocationWhenInUseUsageDescription": "This app needs your location to verify that you are in the correct store for barcode scanning.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to verify that you are in the correct store for barcode scanning, even when the app is in the background.",
         "UIBackgroundModes": [
+          "location",
           "location"
-        ]
-      }
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.hardik.paymart"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./assets/images/app.icon.jpeg"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "jsEngine": "jsc"
+      "jsEngine": "hermes",
+      "package": "com.hardik.paymart"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/app.icon.jpeg"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/app.icon.jpeg",
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
@@ -57,7 +58,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5e4bc317-a620-44f0-a1c3-8f501b3c8de4"
+        "projectId": "40e85fec-372e-4f04-9186-5f3e79e9c3c1"
       }
     },
     "runtimeVersion": {
@@ -65,6 +66,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/5e4bc317-a620-44f0-a1c3-8f501b3c8de4"
-    }
+    },
+    "owner": "astitvasoni"
   }
 }
