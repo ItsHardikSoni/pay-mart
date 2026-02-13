@@ -11,14 +11,13 @@ import * as Sharing from 'expo-sharing';
 import LottieView from 'lottie-react-native';
 
 const EInvoiceScreen = () => {
-  const { cart, total, paymentMode, cashierName } = useLocalSearchParams();
+  const { cart, total, paymentMode, cashierName, razorpayPaymentId, orderNumber } = useLocalSearchParams();
   const { username } = useSession();
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerFullName, setCustomerFullName] = useState('');
   const cartItems = JSON.parse(cart as string);
   const invoiceRef = useRef();
 
-  const billNumber = Math.floor(100000 + Math.random() * 900000);
   const invoiceDate = new Date().toLocaleDateString();
   const invoiceTime = new Date().toLocaleTimeString();
 
@@ -94,10 +93,11 @@ const EInvoiceScreen = () => {
                 </div>
                 <div class="details-section">
                     <table>
-                        <tr><td><strong>Billed To:</strong> ${customerFullName || username}</td><td><strong>Bill No:</strong> ${billNumber}</td></tr>
+                        <tr><td><strong>Billed To:</strong> ${customerFullName || username}</td><td><strong>Bill No:</strong> ${orderNumber}</td></tr>
                         <tr><td><strong>Phone:</strong> ${customerPhone}</td><td><strong>Date:</strong> ${invoiceDate}</td></tr>
                         <tr><td><strong>Payment:</strong> ${paymentMode}</td><td><strong>Time:</strong> ${invoiceTime}</td></tr>
                         ${paymentMode === 'Cash' && cashierName ? `<tr><td><strong>Cashier:</strong> ${cashierName}</td><td></td></tr>` : ''}
+                        ${paymentMode === 'Online' && razorpayPaymentId ? `<tr><td><strong>Payment ID:</strong> ${razorpayPaymentId}</td><td></td></tr>` : ''}
                     </table>
                 </div>
                 <div class="items-table">
@@ -125,7 +125,7 @@ const EInvoiceScreen = () => {
     }
   };
 
-  const InfoRow = ({ label, value }: { label: string, value: string }) => (
+  const InfoRow = ({ label, value }: { label: string, value: string | string[] | undefined}) => (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
@@ -167,11 +167,12 @@ const EInvoiceScreen = () => {
           <View style={styles.separator} />
 
           <View style={styles.invoiceMeta}>
-            <InfoRow label="Bill Number:" value={`${billNumber}`} />
+            <InfoRow label="Bill Number:" value={orderNumber} />
             <InfoRow label="Date:" value={invoiceDate} />
             <InfoRow label="Time:" value={invoiceTime} />
             <InfoRow label="Payment Mode:" value={paymentMode as string || 'N/A'} />
             {paymentMode === 'Cash' && cashierName ? <InfoRow label="Cashier:" value={cashierName as string} /> : null}
+            {paymentMode === 'Online' && razorpayPaymentId ? <InfoRow label="Payment ID:" value={razorpayPaymentId as string} /> : null}
           </View>
 
           <View style={styles.separator} />

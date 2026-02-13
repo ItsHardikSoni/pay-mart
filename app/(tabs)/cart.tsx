@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, SafeAreaView, Modal, TouchableWithoutFeedback, TextInput, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, FlatList, SafeAreaView, Modal, TouchableWithoutFeedback, TextInput, Alert, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { cartState, CartItem } from '../cartState';
 import { router, useFocusEffect } from 'expo-router';
@@ -18,6 +18,30 @@ export default function CartScreen() {
   const [cashierName, setCashierName] = useState<string | null>(null);
   const [cashierData, setCashierData] = useState<any | null>(null);
   const { username } = useSession();
+  const [userDetails, setUserDetails] = useState({ email: '', phone: '', name: '' });
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+        if (username) {
+            const { data, error } = await supabase
+                .from('users')
+                .select('email, phone_number, full_name')
+                .eq('username', username)
+                .single();
+            if (data) {
+                setUserDetails({
+                    email: data.email || '',
+                    phone: data.phone_number || '',
+                    name: data.full_name || '',
+                });
+            } else if (error) {
+                console.error("Error fetching user details:", error.message)
+            }
+        }
+    };
+    fetchUserDetails();
+  }, [username]);
 
   const sanitizeAndConsolidateCart = () => {
     const sanitizedItems: { [key: string]: CartItem } = {};
@@ -174,104 +198,135 @@ export default function CartScreen() {
     setCashierModalVisible(true);
   };
 
-  const processOrder = async (paymentMode: 'Cash' | 'Online') => {
-     try {
-      for (const item of cartItems) {
-        const { data: product, error: fetchError } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.id)
-          .single();
+  const processOrder = async (paymentMode: 'Cash' | 'Online', orderId: string, options: { razorpayPaymentId?: string; cashierName?: string | null }) => {
+    try {
+        const finalTotal = getTotal();
+        const { razorpayPaymentId, cashierName } = options;
+        const now = new Date();
+        const order_date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const order_time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        
+        const processedCartItems = [...cartState.items];
 
-        if (fetchError || !product) throw new Error(`Could not fetch stock for ${item.name}.`);
+        const { error: rpcError } = await supabase.rpc('process_new_order', {
+            p_order_number: orderId,
+            p_username: username,
+            p_total_amount: parseFloat(finalTotal),
+            p_cart_items: processedCartItems,
+            p_payment_mode: paymentMode,
+            p_order_time: order_time,
+            p_order_date: order_date,
+            p_razorpay_payment_id: razorpayPaymentId || null,
+            p_cashier_name: cashierName || null
+        });
 
-        const newStock = product.stock - item.quantity;
-        if (newStock < 0) throw new Error(`Not enough stock for ${item.name}. Transaction cancelled.`);
+        if (rpcError) {
+            throw rpcError;
+        }
 
-        const { error: updateError } = await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
-        if (updateError) throw new Error(`Failed to update stock for ${item.name}.`);
-      }
+        const itemsForInvoice = cartState.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            mrp: (item as any).mrp ?? (item as any).price ?? 0
+        }));
 
-      const processedCartItems = [...cartItems];
-      const finalTotal = getTotal();
+        cartState.items = [];
+        setCartItems([]);
 
-      const order_number = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
-      const itemsToSave = processedCartItems.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        mrp: (item as any).mrp ?? (item as any).price ?? 0
-      }));
-
-      const { error: orderError } = await supabase.from('order_history').insert([
-        {
-          order_number,
-          username,
-          total_amount: parseFloat(finalTotal),
-          items: itemsToSave,
-          payment_mode: paymentMode,
-        },
-      ]);
-
-      if (orderError) {
-        throw new Error(`Failed to save order history: ${orderError.message}`);
-      }
-
-      cartState.items = [];
-      setCartItems([]);
-      
-      return { processedCartItems, finalTotal };
+        return { processedCartItems: itemsForInvoice, finalTotal };
 
     } catch (e: any) {
-      Alert.alert('Transaction Error', e.message || 'An unexpected error occurred.');
-      return null;
+        console.error('Transaction Error:', e);
+        Alert.alert('Transaction Error', e.message || 'An unexpected error occurred and the transaction was rolled back.');
+        return null;
     }
   }
 
   const handleRazorpayPayment = async () => {
-    const orderDetails = await processOrder('Online');
-    if (!orderDetails) return;
+    if (isProcessing) return;
+    setIsProcessing(true);
 
-    const { finalTotal, processedCartItems } = orderDetails;
+    if (!RazorpayCheckout || !RazorpayCheckout.open) {
+        Alert.alert('Setup Incomplete', 'The payment library is not available. Please build the app with `npx expo run:android` or `npx expo run:ios`.');
+        setIsProcessing(false);
+        return;
+    }
 
-    const options = {
-        description: 'Your order from PayMart',
-        image: 'https://i.imgur.com/3g7nmJC.png',
-        currency: 'INR',
-        key: 'rzp_test_SE20E6seA1CZk4', // Replace with your actual key
-        amount: parseFloat(finalTotal) * 100,
-        name: 'PayMart',
-        order_id: '', // Optional
-        prefill: {
-            email: 'your_email@example.com', // Fetch from user session
-            contact: '9999999999', // Fetch from user session
-            name: username || 'Customer'
-        },
-        theme: { color: Colors.light.primary }
-    };
+    const finalTotal = getTotal();
 
-    RazorpayCheckout.open(options).then((data) => {
-        Alert.alert('Success', `Payment successful: ${data.razorpay_payment_id}`);
-        setPaymentModalVisible(false);
-        router.push({
-            pathname: '/e-invoice',
-            params: {
-                cart: JSON.stringify(processedCartItems),
-                total: finalTotal,
-                paymentMode: 'Online'
-            }
+    try {
+        // 1. Create Order on Server
+        const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
+            body: { amount: parseFloat(finalTotal) },
         });
-    }).catch((error) => {
-        Alert.alert('Error', `Payment failed: ${error.code} - ${error.description}`);
-    });
+
+        if (orderError) throw new Error(orderError.message);
+        if (!orderData || !orderData.id) throw new Error('Failed to create order on server.');
+
+        const serverOrderId = orderData.id;
+
+        // 2. Open Razorpay Checkout
+        const options = {
+            description: 'Your order from PayMart Supermarket',
+            image: 'https://i.imgur.com/3g7nmJC.png',
+            currency: 'INR',
+            key: 'rzp_live_SFgkbtmRPxIgyq', // Live Key
+            amount: parseFloat(finalTotal) * 100,
+            name: 'PayMart Supermarket',
+            order_id: serverOrderId,
+            prefill: {
+                email: userDetails.email,
+                contact: userDetails.phone,
+                name: userDetails.name
+            },
+            theme: { color: Colors.light.primary }
+        };
+
+        RazorpayCheckout.open(options).then(async (data) => {
+            // 3. Process Order on Success
+            const result = await processOrder('Online', serverOrderId, { razorpayPaymentId: data.razorpay_payment_id });
+            if (result) {
+                setPaymentModalVisible(false);
+                router.push({
+                    pathname: '/e-invoice',
+                    params: {
+                        cart: JSON.stringify(result.processedCartItems),
+                        total: result.finalTotal,
+                        paymentMode: 'Online',
+                        razorpayPaymentId: data.razorpay_payment_id,
+                        orderNumber: serverOrderId
+                    }
+                });
+            }
+        }).catch((error) => {
+            // 4. Handle Payment Failure/Cancellation
+            if (error.code === 0) {
+                 console.log('Payment cancelled by user.');
+            } else if (error.code === 2) {
+                Alert.alert('Payment Error', 'The payment failed. This might be due to an issue with the server. Please try again.');
+            } else {
+                 Alert.alert('Payment Failed', error.description || 'An unexpected error occurred.');
+            }
+        }).finally(() => {
+            setIsProcessing(false);
+        });
+
+    } catch (e: any) {
+        Alert.alert('Error Preparing Payment', e.message);
+        setIsProcessing(false);
+    }
   };
+
 
   const handleCashierVerification = async () => {
     if (!cashierData) {
       Alert.alert('Error', 'Cashier not verified. Please check the details.');
       return;
     }
+    const order_id = `PAYMART-CASH-${Date.now()}`;
 
-    const result = await processOrder('Cash');
+    const result = await processOrder('Cash', order_id, { cashierName: cashierName });
     if (result) {
         const newPaymentCount = (cashierData.payment_count || 0) + 1;
         await supabase.from('cashers').update({ payment_count: newPaymentCount }).eq('casher_id', cashierId);
@@ -287,7 +342,8 @@ export default function CartScreen() {
                 cart: JSON.stringify(result.processedCartItems), 
                 total: result.finalTotal, 
                 paymentMode: 'Cash',
-                cashierName: cashierName 
+                cashierName: cashierName, 
+                orderNumber: order_id
             } 
         });
         setCashierName(null);
@@ -300,15 +356,24 @@ export default function CartScreen() {
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Payment Method</Text>
-              <TouchableOpacity style={styles.paymentOption} onPress={handleRazorpayPayment}>
-                <Ionicons name="card-outline" size={24} color="white" style={styles.paymentOptionIcon} />
-                <Text style={styles.paymentOptionText}>Online Payment</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.paymentOption} onPress={handleCashPayment}>
-                <Ionicons name="cash-outline" size={24} color="white" style={styles.paymentOptionIcon} />
-                <Text style={styles.paymentOptionText}>Cash Payment</Text>
-              </TouchableOpacity>
+              {isProcessing ? (
+                <View style={styles.processingContainer}>
+                    <ActivityIndicator size="large" color={Colors.light.primary} />
+                    <Text style={styles.processingText}>Preparing your order...</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={styles.modalTitle}>Select Payment Method</Text>
+                  <TouchableOpacity style={styles.paymentOption} onPress={handleRazorpayPayment}>
+                    <Ionicons name="card-outline" size={24} color="white" style={styles.paymentOptionIcon} />
+                    <Text style={styles.paymentOptionText}>Online Payment</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.paymentOption} onPress={handleCashPayment}>
+                    <Ionicons name="cash-outline" size={24} color="white" style={styles.paymentOptionIcon} />
+                    <Text style={styles.paymentOptionText}>Cash Payment</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -318,22 +383,31 @@ export default function CartScreen() {
 
   const renderCashierModal = () => (
     <Modal animationType="slide" transparent={true} visible={cashierModalVisible} onRequestClose={() => setCashierModalVisible(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Cashier Verification</Text>
-          <TextInput style={styles.input} placeholder="Cashier ID" value={cashierId} onChangeText={setCashierId} />
-          <TextInput style={styles.input} placeholder="Phone Number" value={cashierPhone} onChangeText={setCashierPhone} keyboardType="phone-pad" maxLength={10} />
-          {cashierName && (
-            <View style={styles.cashierNameContainer}>
-                 <Ionicons name="checkmark-circle" size={20} color="green" />
-                <Text style={styles.cashierNameText}>{cashierName}</Text>
-            </View>
-          )}
-          <TouchableOpacity style={[styles.verifyButton, !cashierName && styles.disabledVerifyButton]} onPress={handleCashierVerification} disabled={!cashierName}>
-            <Text style={styles.checkoutButtonText}>Verify & Proceed</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+            <TouchableWithoutFeedback onPress={() => setCashierModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <TouchableWithoutFeedback>
+                        <View style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>Cashier Verification</Text>
+                            <TextInput style={styles.input} placeholder="Cashier ID" value={cashierId} onChangeText={setCashierId} />
+                            <TextInput style={styles.input} placeholder="Phone Number" value={cashierPhone} onChangeText={setCashierPhone} keyboardType="phone-pad" maxLength={10} />
+                            {cashierName && (
+                                <View style={styles.cashierNameContainer}>
+                                    <Ionicons name="checkmark-circle" size={20} color="green" />
+                                    <Text style={styles.cashierNameText}>{cashierName}</Text>
+                                </View>
+                            )}
+                            <TouchableOpacity style={[styles.verifyButton, !cashierName && styles.disabledVerifyButton]} onPress={handleCashierVerification} disabled={!cashierName}>
+                                <Text style={styles.checkoutButtonText}>Verify & Proceed</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableWithoutFeedback>
+                </View>
+            </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
     </Modal>
   );
 
@@ -351,7 +425,7 @@ export default function CartScreen() {
           <View style={styles.emptyContainer}>
             <Ionicons name="cart-outline" size={100} color="#d0d0d0" />
             <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
-            <Text style={styles.emptySubtitle}>Looks like you haven\'t added anything to your cart yet.</Text>
+            <Text style={styles.emptySubtitle}>Looks like you haven't added anything to your cart yet.</Text>
             <TouchableOpacity style={styles.startButton} onPress={() => router.push('/scan')}>
               <Text style={styles.startButtonText}>Start Shopping</Text>
             </TouchableOpacity>
@@ -415,4 +489,6 @@ const styles = StyleSheet.create({
   disabledVerifyButton: { backgroundColor: '#A9A9A9' },
   cashierNameContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
   cashierNameText: { marginLeft: 10, fontSize: 16, color: 'green', fontWeight: 'bold' },
+  processingContainer: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
+  processingText: { marginTop: 15, fontSize: 16, fontWeight: '500', color: '#555' },
 });
