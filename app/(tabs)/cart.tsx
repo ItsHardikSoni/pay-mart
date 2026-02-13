@@ -44,26 +44,40 @@ export default function CartScreen() {
   }, [username]);
 
   const sanitizeAndConsolidateCart = () => {
-    const sanitizedItems: { [key: string]: CartItem } = {};
+    const originalCount = cartState.items.length;
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
-    for (const item of cartState.items) {
-        const id = item.id.toString();
+    const validItems = cartState.items.filter(item => {
+        if (typeof item.id !== 'string' || !uuidRegex.test(item.id)) {
+            console.warn('Removing invalid item from cart:', item);
+            return false;
+        }
+        return true;
+    });
 
-        if (sanitizedItems[id]) {
-            sanitizedItems[id].quantity += item.quantity;
+    if (validItems.length < originalCount) {
+        Alert.alert('Cart Updated', 'Some invalid items were removed from your cart.');
+    }
+
+    const consolidatedItems: { [key: string]: CartItem } = {};
+    for (const item of validItems) {
+        const key = item.id.toString();
+        if (consolidatedItems[key]) {
+            consolidatedItems[key].quantity += item.quantity;
         } else {
-            sanitizedItems[id] = { ...item, id };
+            consolidatedItems[key] = { ...item };
         }
     }
 
-    cartState.items = Object.values(sanitizedItems);
-    setCartItems([...cartState.items]);
+    const finalCart = Object.values(consolidatedItems);
+    cartState.items = finalCart;
+    setCartItems([...finalCart]);
   };
 
 
   const fetchStockLevels = async () => {
     if (cartState.items.length === 0) return;
-    const productIds = cartState.items.map(item => item.id).filter(id => id && id !== 'NaN');
+    const productIds = cartState.items.map(item => item.id);
 
     if (productIds.length === 0) return;
 
@@ -198,10 +212,10 @@ export default function CartScreen() {
     setCashierModalVisible(true);
   };
 
-  const processOrder = async (paymentMode: 'Cash' | 'Online', orderId: string, options: { razorpayPaymentId?: string; cashierName?: string | null }) => {
+  const processOrder = async (paymentMode: 'Cash' | 'Online', orderId: string, options: { razorpayPaymentId?: string; cashierName?: string | null; razorpaySignature?: string; }) => {
     try {
         const finalTotal = getTotal();
-        const { razorpayPaymentId, cashierName } = options;
+        const { razorpayPaymentId, cashierName, razorpaySignature } = options;
         const now = new Date();
         const order_date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const order_time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
@@ -217,7 +231,8 @@ export default function CartScreen() {
             p_order_time: order_time,
             p_order_date: order_date,
             p_razorpay_payment_id: razorpayPaymentId || null,
-            p_cashier_name: cashierName || null
+            p_cashier_name: cashierName || null,
+            p_razorpay_signature: razorpaySignature || null
         });
 
         if (rpcError) {
@@ -256,7 +271,6 @@ export default function CartScreen() {
     const finalTotal = getTotal();
 
     try {
-        // 1. Create Order on Server
         const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
             body: { amount: parseFloat(finalTotal) },
         });
@@ -266,12 +280,11 @@ export default function CartScreen() {
 
         const serverOrderId = orderData.id;
 
-        // 2. Open Razorpay Checkout
         const options = {
             description: 'Your order from PayMart Supermarket',
             image: 'https://i.imgur.com/3g7nmJC.png',
             currency: 'INR',
-            key: 'rzp_live_SFgkbtmRPxIgyq', // Live Key
+            key: 'rzp_live_SFgkbtmRPxIgyq',
             amount: parseFloat(finalTotal) * 100,
             name: 'PayMart Supermarket',
             order_id: serverOrderId,
@@ -283,9 +296,28 @@ export default function CartScreen() {
             theme: { color: Colors.light.primary }
         };
 
-        RazorpayCheckout.open(options).then(async (data) => {
-            // 3. Process Order on Success
-            const result = await processOrder('Online', serverOrderId, { razorpayPaymentId: data.razorpay_payment_id });
+        RazorpayCheckout.open(options).then(async (paymentResponse) => {
+            setIsProcessing(true);
+
+            const { data: verificationData, error: verificationError } = await supabase.functions.invoke('verify-razorpay-payment', {
+                body: {
+                    razorpay_order_id: paymentResponse.razorpay_order_id,
+                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                    razorpay_signature: paymentResponse.razorpay_signature,
+                }
+            });
+
+            if (verificationError || !verificationData.verified) {
+                Alert.alert('Payment Verification Failed', 'There was an issue verifying your payment. Please contact support if you have been charged.');
+                setIsProcessing(false);
+                return;
+            }
+
+            const result = await processOrder('Online', serverOrderId, { 
+                razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                razorpaySignature: paymentResponse.razorpay_signature
+            });
+
             if (result) {
                 setPaymentModalVisible(false);
                 router.push({
@@ -294,21 +326,17 @@ export default function CartScreen() {
                         cart: JSON.stringify(result.processedCartItems),
                         total: result.finalTotal,
                         paymentMode: 'Online',
-                        razorpayPaymentId: data.razorpay_payment_id,
+                        razorpayPaymentId: paymentResponse.razorpay_payment_id,
                         orderNumber: serverOrderId
                     }
                 });
             }
+            setIsProcessing(false);
+
         }).catch((error) => {
-            // 4. Handle Payment Failure/Cancellation
-            if (error.code === 0) {
-                 console.log('Payment cancelled by user.');
-            } else if (error.code === 2) {
-                Alert.alert('Payment Error', 'The payment failed. This might be due to an issue with the server. Please try again.');
-            } else {
+            if (error.code !== 0) {
                  Alert.alert('Payment Failed', error.description || 'An unexpected error occurred.');
             }
-        }).finally(() => {
             setIsProcessing(false);
         });
 
@@ -324,7 +352,7 @@ export default function CartScreen() {
       Alert.alert('Error', 'Cashier not verified. Please check the details.');
       return;
     }
-    const order_id = `PAYMART-CASH-${Date.now()}`;
+    const order_id = `CASH-${Date.now()}`;
 
     const result = await processOrder('Cash', order_id, { cashierName: cashierName });
     if (result) {
@@ -359,7 +387,7 @@ export default function CartScreen() {
               {isProcessing ? (
                 <View style={styles.processingContainer}>
                     <ActivityIndicator size="large" color={Colors.light.primary} />
-                    <Text style={styles.processingText}>Preparing your order...</Text>
+                    <Text style={styles.processingText}>Verifying Payment...</Text>
                 </View>
               ) : (
                 <>

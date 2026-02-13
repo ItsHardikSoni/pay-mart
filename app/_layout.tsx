@@ -69,6 +69,7 @@ export default function RootLayout() {
               <Stack.Screen name="signup" options={{ headerShown: false }} />
               <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
               <Stack.Screen name="e-invoice" options={{ headerShown: false }} />
+              <Stack.Screen name="refer-and-earn" options={{ headerShown: false }} />
               <Stack.Screen name="admin-login" options={{ headerShown: false }} />
               <Stack.Screen name="admin" options={{ headerShown: false, gestureEnabled: false }} />
             </Stack>

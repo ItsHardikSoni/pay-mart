@@ -28,7 +28,8 @@ const OrderHistory = () => {
         .from('order_history')
         .select('*')
         .eq('username', username)
-        .order('order_date', { ascending: false });
+        .order('order_date', { ascending: false })
+        .order('order_time', { ascending: false });
 
       if (error) {
         throw error;
@@ -62,41 +63,54 @@ const OrderHistory = () => {
         cart: JSON.stringify(order.items),
         total: order.total_amount,
         paymentMode: order.payment_mode,
-        isPastOrder: 'true',
-        orderDate: order.order_date,
         orderNumber: order.order_number,
+        cashierName: order.cashier_name,
+        razorpayPaymentId: order.razorpay_payment_id,
+        order_date: order.order_date, 
+        order_time: order.order_time,
       },
     });
   };
 
   const renderItem = ({ item }: { item: any }) => {
+    const orderDateTime = new Date(`${item.order_date}T${item.order_time}`);
+    const formattedDate = orderDateTime.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+    const formattedTime = orderDateTime.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+
     return (
-      <TouchableOpacity onPress={() => handleOrderPress(item)}>
-        <View style={styles.orderContainer}>
-          <View style={styles.orderHeader}>
-              <Ionicons name="receipt-outline" size={30} color={Colors.light.primary} />
-              <View style={styles.orderInfo}>
+      <TouchableOpacity onPress={() => handleOrderPress(item)} style={styles.orderCard}>
+        <View style={styles.cardTopSection}>
+            <View style={styles.orderIdContainer}>
+                <Ionicons name="receipt-outline" size={18} color="#34495e" />
                 <Text style={styles.orderId}>Order #{item.order_number}</Text>
-                <Text style={styles.detailText}>{new Date(item.order_date).toLocaleDateString()}</Text>
-              </View>
-          </View>
-          <View style={styles.itemsContainer}>
-              {item.items.map((product: any, index: number) => (
-                  <View key={index} style={styles.item}>
-                      <Text style={styles.itemName}>{product.name}</Text>
-                      <Text style={styles.itemQuantity}>x{product.quantity}</Text>
-                  </View>
-              ))}
-          </View>
-          <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Total Amount</Text>
-              <Text style={styles.totalAmount}>₹{item.total_amount.toFixed(2)}</Text>
+            </View>
+            <Text style={styles.totalAmount}>₹{item.total_amount.toFixed(2)}</Text>
+        </View>
+
+        <View style={styles.cardBottomSection}>
+          <Text style={styles.dateTimeText}>{formattedDate}, {formattedTime}</Text>
+          <View style={styles.paymentModeContainer}>
+            <Ionicons 
+              name={item.payment_mode === 'Online' ? 'card' : 'cash'} 
+              size={16} 
+              color={item.payment_mode === 'Online' ? Colors.light.primary : '#27ae60'} 
+            />
+            <Text style={[styles.paymentModeText, { color: item.payment_mode === 'Online' ? Colors.light.primary : '#27ae60' }]}>
+              {item.payment_mode}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
     );
 };
-
 
   if (loading && !refreshing) {
     return (
@@ -143,7 +157,7 @@ const OrderHistory = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#f4f6f8',
     },
     centered: {
         flex: 1,
@@ -163,7 +177,7 @@ const styles = StyleSheet.create({
       paddingVertical: 15,
       backgroundColor: 'white',
       borderBottomWidth: 1,
-      borderBottomColor: '#e0e0e0',
+      borderBottomColor: '#eef0f2',
     },
     backButton: {
       padding: 5,
@@ -171,77 +185,67 @@ const styles = StyleSheet.create({
     pageTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: Colors.light.primary,
+        color: '#2c3e50',
     },
     listContainer: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+    },
+    orderCard: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
         padding: 16,
-    },
-    orderContainer: {
-        backgroundColor: 'white',
-        borderRadius: 15,
-        padding: 20,
-        marginBottom: 20,
-        shadowColor: '#000',
+        marginBottom: 12,
+        shadowColor: '#95a5a6',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 5,
+        shadowOpacity: 0.1,
+        shadowRadius: 7,
+        elevation: 4,
     },
-    orderHeader: {
+    cardTopSection: {
+      marginBottom: 12,
+    },
+    orderIdContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingBottom: 15,
-        marginBottom: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    orderInfo: {
-      marginLeft: 15,
     },
     orderId: {
-        fontSize: 17,
-        fontWeight: 'bold',
-        color: Colors.light.primary,
-    },
-    detailText: {
-        fontSize: 14,
-        color: '#555',
-        marginTop: 4,
-    },
-    itemsContainer: {
-        marginBottom: 15,
-    },
-    item: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingVertical: 8,
-    },
-    itemName: {
-        fontSize: 16,
-        color: '#444',
-    },
-    itemQuantity: {
       fontSize: 16,
-      color: '#666',
-      fontWeight: '500',
+      fontWeight: '600',
+      color: '#34495e',
+      marginLeft: 8,
     },
-    totalContainer: {
+    totalAmount: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: '#2c3e50',
+      marginTop: 8,
+    },
+    cardBottomSection: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingTop: 15,
+      paddingTop: 12,
       borderTopWidth: 1,
-      borderTopColor: '#f0f0f0',
+      borderTopColor: '#f4f6f8',
     },
-    totalLabel: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#333',
+    dateTimeText: {
+      fontSize: 14,
+      color: '#7f8c8d',
+      fontWeight: '500',
     },
-    totalAmount: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: Colors.light.primary,
+    paymentModeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: 6,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      backgroundColor: '#ecf0f1',
+    },
+    paymentModeText: {
+      marginLeft: 6,
+      fontSize: 13,
+      fontWeight: '600',
     },
     emptyContainer: {
         flex: 1,

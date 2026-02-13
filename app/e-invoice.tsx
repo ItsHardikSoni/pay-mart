@@ -1,6 +1,5 @@
-
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Platform } from 'react-native';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Platform, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,17 +10,38 @@ import * as Sharing from 'expo-sharing';
 import LottieView from 'lottie-react-native';
 
 const EInvoiceScreen = () => {
-  const { cart, total, paymentMode, cashierName, razorpayPaymentId, orderNumber } = useLocalSearchParams();
+  const { cart, total, paymentMode, cashierName, razorpayPaymentId, orderNumber, order_date, order_time } = useLocalSearchParams();
   const { username } = useSession();
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerFullName, setCustomerFullName] = useState('');
-  const cartItems = JSON.parse(cart as string);
-  const invoiceRef = useRef();
+  const [isAnimating, setIsAnimating] = useState(true);
+  const [invoiceDate, setInvoiceDate] = useState('');
+  const [invoiceTime, setInvoiceTime] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const invoiceDate = new Date().toLocaleDateString();
-  const invoiceTime = new Date().toLocaleTimeString();
+  const cartItems = useMemo(() => {
+    try {
+      return cart ? JSON.parse(cart as string) : [];
+    } catch (error) {
+      console.error("Failed to parse cart items:", error);
+      Alert.alert("Error", "Could not display cart items.");
+      return [];
+    }
+  }, [cart]);
+
+  const invoiceRef = useRef(null);
 
   useEffect(() => {
+    if (order_date && order_time) {
+        const orderDateTime = new Date(`${order_date}T${order_time}`);
+        setInvoiceDate(orderDateTime.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+        setInvoiceTime(orderDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }));
+    } else {
+        const now = new Date();
+        setInvoiceDate(now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+        setInvoiceTime(now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }));
+    }
+
     const fetchData = async () => {
       if (username) {
         const { data: userData, error: userError } = await supabase
@@ -39,11 +59,11 @@ const EInvoiceScreen = () => {
       }
     };
     fetchData();
-  }, [username]);
+  }, [username, order_date, order_time]);
 
   const generateHtmlForPdf = () => {
     const itemsHtml = cartItems.map((item: any) => `
-        <tr key=${item.id}>
+        <tr>
             <td>${item.name}</td>
             <td>₹${item.mrp.toFixed(2)}</td>
             <td>${item.quantity}</td>
@@ -116,12 +136,23 @@ const EInvoiceScreen = () => {
   };
 
   const handleDownloadInvoice = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
     const htmlContent = generateHtmlForPdf();
     try {
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      await Sharing.shareAsync(uri, { dialogTitle: 'Download Invoice', UTI: '.pdf' });
+      if (Platform.OS === 'ios') {
+        await Sharing.shareAsync(uri, { dialogTitle: 'Download Invoice', UTI: '.pdf', mimeType: 'application/pdf' });
+      } else {
+        await Sharing.shareAsync(uri, { dialogTitle: 'Download Invoice', mimeType: 'application/pdf' });
+      }
     } catch (error) {
-      console.error('Failed to generate or share PDF', error);
+      if (!String(error).includes('Another share request is being processed')) {
+        console.error('Failed to generate or share PDF', error);
+        Alert.alert('Error', 'Failed to generate or share invoice.');
+      }
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -134,6 +165,17 @@ const EInvoiceScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {isAnimating && (
+        <View style={styles.invoiceAnimation} pointerEvents="none">
+          <LottieView
+            source={require('../assets/lottie/success-animation.json')}
+            autoPlay
+            loop={false}
+            style={{ flex: 1 }}
+            onAnimationFinish={() => setIsAnimating(false)}
+          />
+        </View>
+      )}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
@@ -142,12 +184,6 @@ const EInvoiceScreen = () => {
         <View style={{ width: 24 }} />
       </View>
 
-      <LottieView
-        source={require('../assets/lottie/success-animation.json')}
-        autoPlay
-        loop={false}
-        style={styles.invoiceAnimation}
-      />
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.card} ref={invoiceRef}>
           <View style={styles.martDetails}>
@@ -214,7 +250,7 @@ const EInvoiceScreen = () => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadInvoice}>
+        <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadInvoice} disabled={isDownloading}>
           <Ionicons name="download-outline" size={22} color={Colors.light.primary} />
           <Text style={styles.downloadButtonText}>Download</Text>
         </TouchableOpacity>
@@ -237,7 +273,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 1,
+    zIndex: 10, // Ensure it's on top while animating
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, RefreshControl } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../supabaseClient';
 import { useSession } from '../context/SessionProvider';
@@ -267,6 +267,13 @@ export default function AccountScreen() {
                   <Ionicons name="chevron-forward" size={24} color="#ccc" />
                 </TouchableOpacity>
               </Link>
+              <Link href="/refer-and-earn" asChild>
+                <TouchableOpacity style={styles.optionButton}>
+                  <Ionicons name="share-social-outline" size={24} color={Colors.light.primary} />
+                  <Text style={styles.optionText}>Refer & Earn</Text>
+                  <Ionicons name="chevron-forward" size={24} color="#ccc" />
+                </TouchableOpacity>
+              </Link>
               <Link href="/help-and-support" asChild>
                 <TouchableOpacity style={styles.optionButton}>
                   <Ionicons name="help-circle-outline" size={24} color={Colors.light.primary} />
@@ -288,46 +295,52 @@ export default function AccountScreen() {
             <Text style={styles.logoutButtonText}>Logout</Text>
           </TouchableOpacity>
         </ScrollView>
-      <Modal
+        <Modal
         animationType="slide"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(!modalVisible)}
       >
-        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalView}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Edit Profile</Text>
-                  <TouchableOpacity onPress={() => setModalVisible(false)}>
-                    <Ionicons name="close-circle" size={28} color="#ccc" />
-                  </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+            <View style={styles.modalInnerContainer}>
+              <TouchableWithoutFeedback>
+                <View style={styles.modalView}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Edit Profile</Text>
+                    <TouchableOpacity onPress={() => setModalVisible(false)}>
+                      <Ionicons name="close-circle" size={28} color="#ccc" />
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView>
+                    <Text style={styles.inputLabel}>Name<Text style={styles.required}>*</Text></Text>
+                    <TextInput style={styles.input} onChangeText={setTempName} value={tempName} placeholder="Enter your name" />
+                    {!!nameError && <Text style={styles.errorText}>{nameError}</Text>}
+
+                    <Text style={styles.inputLabel}>Username<Text style={styles.required}>*</Text></Text>
+                    <TextInput style={styles.input} onChangeText={setTempUsername} value={tempUsername} placeholder="Enter your username" autoCapitalize="none" />
+                    {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
+
+                    <Text style={styles.inputLabel}>Phone<Text style={styles.required}>*</Text></Text>
+                    <TextInput style={styles.input} onChangeText={setTempPhone} value={tempPhone} placeholder="Enter your phone" keyboardType="phone-pad" />
+                    {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
+
+                    <Text style={styles.inputLabel}>Email<Text style={styles.required}>*</Text></Text>
+                    <TextInput style={styles.input} onChangeText={setTempEmail} value={tempEmail} placeholder="Enter your email" keyboardType="email-address" />
+                    {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
+
+                    <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+                      {saving ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
+                    </TouchableOpacity>
+                  </ScrollView>
                 </View>
-                
-                <Text style={styles.inputLabel}>Name<Text style={styles.required}>*</Text></Text>
-                <TextInput style={styles.input} onChangeText={setTempName} value={tempName} placeholder="Enter your name" />
-                {!!nameError && <Text style={styles.errorText}>{nameError}</Text>}
-
-                <Text style={styles.inputLabel}>Username<Text style={styles.required}>*</Text></Text>
-                <TextInput style={styles.input} onChangeText={setTempUsername} value={tempUsername} placeholder="Enter your username" autoCapitalize="none" />
-                {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
-
-                <Text style={styles.inputLabel}>Phone<Text style={styles.required}>*</Text></Text>
-                <TextInput style={styles.input} onChangeText={setTempPhone} value={tempPhone} placeholder="Enter your phone" keyboardType="phone-pad" />
-                {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
-
-                <Text style={styles.inputLabel}>Email<Text style={styles.required}>*</Text></Text>
-                <TextInput style={styles.input} onChangeText={setTempEmail} value={tempEmail} placeholder="Enter your email" keyboardType="email-address" />
-                {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
-
-                <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-                  {saving ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -452,12 +465,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
+  modalInnerContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   modalView: {
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
     paddingBottom: 30,
+    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
