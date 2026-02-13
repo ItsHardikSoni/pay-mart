@@ -1,15 +1,16 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors } from '../constants/theme';
 import LottieView from 'lottie-react-native';
+import * as Clipboard from 'expo-clipboard';
 
 const ReferAndEarnScreen = () => {
   const router = useRouter();
   const referralCode = "PAYMART2024";
   const appLink = "https://example.com/download"; // Replace with your app's actual link
+  const [toastMessage, setToastMessage] = useState('');
 
   const onShare = async () => {
     try {
@@ -31,6 +32,12 @@ const ReferAndEarnScreen = () => {
     } catch (error: any) {
       console.error('Failed to share:', error.message);
     }
+  };
+
+  const onCopy = async () => {
+    await Clipboard.setStringAsync(referralCode);
+    setToastMessage('Referral code copied to clipboard!');
+    setTimeout(() => setToastMessage(''), 3000); // Hide after 3 seconds
   };
 
   return (
@@ -55,7 +62,7 @@ const ReferAndEarnScreen = () => {
 
         <View style={styles.referralCodeContainer}>
             <Text style={styles.referralCodeText}>{referralCode}</Text>
-            <TouchableOpacity onPress={() => {}} style={styles.copyButton}>
+            <TouchableOpacity onPress={onCopy} style={styles.copyButton}>
                 <Ionicons name="copy-outline" size={22} color={Colors.light.primary} />
             </TouchableOpacity>
         </View>
@@ -65,6 +72,11 @@ const ReferAndEarnScreen = () => {
           <Text style={styles.shareButtonText}>Share Your Code</Text>
         </TouchableOpacity>
       </View>
+      {toastMessage ? (
+        <View style={styles.toastContainer}>
+            <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 };
@@ -158,6 +170,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 10,
+  },
+  toastContainer: {
+    position: 'absolute',
+    bottom: 50,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    zIndex: 100
+  },
+  toastText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: 'bold',
   },
 });
 

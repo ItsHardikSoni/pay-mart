@@ -17,6 +17,16 @@ const QuickAction = ({ icon, label, screen }) => (
   </Link>
 );
 
+const HowItWorksStep = ({ icon, title, description }) => (
+    <View style={styles.stepContainer}>
+        <Ionicons name={icon} size={40} color={Colors.light.primary} style={styles.stepIcon} />
+        <View style={styles.stepTextContainer}>
+            <Text style={styles.stepTitle}>{title}</Text>
+            <Text style={styles.stepDescription}>{description}</Text>
+        </View>
+    </View>
+);
+
 export default function HomeScreen() {
   const { isLoggedIn, logout } = useSession();
   const [fullName, setFullName] = useState('Shopper');
@@ -76,10 +86,27 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.howItWorksContainer}>
-        <Text style={styles.howItWorksTitle}>How it works</Text>
-        <Text style={styles.howItWorksStep}>1. Scan product barcodes using your camera</Text>
-        <Text style={styles.howItWorksStep}>2. Review items and proceed to checkout</Text>
-        <Text style={styles.howItWorksStep}>3. Pay online or at the counter - it's that simple!</Text>
+        <Text style={styles.howItWorksTitle}>How It Works</Text>
+        <HowItWorksStep
+            icon="scan-circle-outline"
+            title="Scan & Add to Cart"
+            description="Use your phone’s camera to scan product barcodes. Items are instantly added to your digital cart."
+        />
+        <HowItWorksStep
+            icon="cart-outline"
+            title="Review & Edit Your Cart"
+            description="Easily view your cart, adjust quantities, or remove items before you finalize your purchase."
+        />
+        <HowItWorksStep
+            icon="card-outline"
+            title="Seamless Checkout"
+            description="Choose to pay securely online with a card or UPI. Or, pay at the counter—your choice!"
+        />
+        <HowItWorksStep
+            icon="receipt-outline"
+            title="E-Receipt & History"
+            description="After payment, receive a digital receipt instantly. Access all past orders anytime in your account."
+        />
       </View>
     </ScrollView>
   );
@@ -158,20 +185,37 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   howItWorksContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    marginHorizontal: 20,
-    marginVertical: 20,
+      backgroundColor: 'white',
+      borderRadius: 15,
+      padding: 20,
+      marginHorizontal: 20,
+      marginVertical: 20,
   },
   howItWorksTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
+      fontSize: 20,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      textAlign: 'center',
   },
-  howItWorksStep: {
-    fontSize: 14,
-    color: 'gray',
-    marginBottom: 5,
+  stepContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+  },
+  stepIcon: {
+      marginRight: 15,
+  },
+  stepTextContainer: {
+      flex: 1,
+  },
+  stepTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#333',
+  },
+  stepDescription: {
+      fontSize: 14,
+      color: 'gray',
+      marginTop: 4,
   },
 });

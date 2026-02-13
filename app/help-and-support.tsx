@@ -1,29 +1,69 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/theme';
 import { useNavigation } from 'expo-router';
+import { Colors } from '../constants/theme';
 
 const faqs = [
   {
-    question: 'How do I scan a product?',
-    answer: 'To scan a product, go to the Scan tab and point your camera at the barcode. The app will automatically detect the barcode and fetch the product details.',
+    question: 'What is PayMart? ',
+    answer: 'PayMart is a smart shopping application designed to streamline your in-store experience. With our Scan & Go feature, you can scan product barcodes, add items to your digital cart, and check out seamlessly, either online or at the counter.',
   },
   {
-    question: 'How do I view my order history?',
-    answer: 'You can view your order history by navigating to the Account tab and selecting Order History. All your past orders will be listed there.',
+    question: 'How does the Scan & Go feature work?',
+    answer: 'Simply open the app and tap the \'Scan\' button. Point your phone’s camera at a product’s barcode. The item will be instantly identified and added to your cart. You can adjust quantities or remove items directly from the app.',
   },
   {
-    question: 'How do I edit my profile?',
-    answer: 'To edit your profile, go to the Account tab and tap the Edit button. You can update your name, username, phone number, and email address.',
+      question: 'What if I scan the wrong item or change my mind?',
+      answer: 'No problem! You can easily manage your cart at any time. Just go to your cart screen, where you can remove items by swiping or tapping a delete icon, and you can adjust the quantity of any item before you proceed to checkout.'
+  },
+  {
+    question: 'What payment methods are accepted?',
+    answer: 'We offer flexible payment options. You can pay securely within the app using credit/debit cards and UPI, or you can choose to pay at the store’s counter with cash or other available methods.',
+  },
+  {
+    question: 'Is my payment information secure?',
+    answer: 'Absolutely. We prioritize your security. All online transactions are processed through a secure, encrypted payment gateway. We do not store your sensitive card details on our servers.',
+  },
+  {
+    question: 'Why does the app need camera and location access?',
+    answer: 'PayMart uses your camera for the \'Scan & Go\' feature to scan barcodes. Location access is required to verify you are in a participating store, which helps prevent fraud. Your data is used only for these purposes and is not shared.',
+  },
+  {
+    question: 'How can I view my past orders and receipts?',
+    answer: 'Navigate to the \'Orders\' or \'Account\' section to find your complete order history. Every purchase comes with a digital receipt, which you can view or download anytime.',
+  },
+  {
+      question: 'What happens if the app closes or my phone dies?',
+      answer: 'Your shopping cart is automatically saved to your account in real-time. If the app closes or your phone turns off, just reopen it and log in. Your cart will be right where you left it.'
+  },
+  {
+    question: 'How do I use a referral code?',
+    answer: 'You can enter a referral code when you sign up or in the \'Refer & Earn\' section of the app. Once applied, you and the friend who referred you will receive exciting rewards.',
+  },
+  {
+    question: 'What is your return policy?',
+    answer: 'All sales are final and items are sold on a non-returnable basis. We encourage you to double-check your items at the time of purchase before leaving the store.',
+  },
+  {
+    question: 'Who do I contact for support?',
+    answer: 'If you have any issues or questions, you can reach our support team by tapping the \'Contact Us\' button below or emailing us at support@paymart.com.',
   },
 ];
 
 const HelpAndSupportScreen = () => {
   const navigation = useNavigation();
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  const toggleFaq = (index: number) => {
+    setExpandedFaq(expandedFaq === index ? null : index);
+  };
 
   const handleContactUs = () => {
-    Linking.openURL('mailto:support@paymart.com');
+    Linking.openURL('mailto:support@paymart.com?subject=Help and Support').catch(() => {
+        Alert.alert("Error", "Unable to open email client.");
+    });
   };
 
   return (
@@ -39,16 +79,25 @@ const HelpAndSupportScreen = () => {
           <Text style={styles.cardTitle}>Frequently Asked Questions</Text>
           {faqs.map((faq, index) => (
             <View key={index} style={styles.faqItem}>
-              <Text style={styles.faqQuestion}>{faq.question}</Text>
-              <Text style={styles.faqAnswer}>{faq.answer}</Text>
+              <TouchableOpacity onPress={() => toggleFaq(index)} style={styles.faqQuestionContainer}>
+                <Text style={styles.faqQuestion}>{faq.question}</Text>
+                <Ionicons 
+                  name={expandedFaq === index ? 'chevron-up-outline' : 'chevron-down-outline'} 
+                  size={20} 
+                  color="#555" 
+                />
+              </TouchableOpacity>
+              {expandedFaq === index && (
+                <Text style={styles.faqAnswer}>{faq.answer}</Text>
+              )}
             </View>
           ))}
         </View>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Contact Us</Text>
           <TouchableOpacity style={styles.contactButton} onPress={handleContactUs}>
-            <Ionicons name="mail-outline" size={24} color={Colors.light.primary} />
-            <Text style={styles.contactButtonText}>support@paymart.com</Text>
+            <Ionicons name="mail-outline" size={22} color="#fff" />
+            <Text style={styles.contactButtonText}>Email Support</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -59,64 +108,80 @@ const HelpAndSupportScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.lightBackground,
+    backgroundColor: '#f4f6f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#eef0f2',
   },
   backButton: {
-    marginRight: 16,
+    marginRight: 20,
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: Colors.light.primary,
   },
   scrollContainer: {
-    padding: 16,
+    padding: 20,
   },
   card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 20,
-    marginBottom: 16,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
     elevation: 3,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
-    color: Colors.light.text,
+    marginBottom: 15,
+    color: '#333',
   },
   faqItem: {
-    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingVertical: 15,
+  },
+  faqQuestionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   faqQuestion: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.light.text,
+    fontWeight: '600',
+    color: '#444',
+    flex: 1, // Allow text to wrap
   },
   faqAnswer: {
     fontSize: 14,
-    color: Colors.light.textSecondary,
-    marginTop: 8,
+    color: '#666',
+    marginTop: 10,
+    lineHeight: 22,
   },
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 15,
+    borderRadius: 10,
   },
   contactButtonText: {
+    color: '#fff',
     fontSize: 16,
-    color: Colors.light.primary,
-    marginLeft: 8,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
 });
 
