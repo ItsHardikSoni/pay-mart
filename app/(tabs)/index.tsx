@@ -63,7 +63,7 @@ export default function HomeScreen() {
   }, [isLoggedIn]);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.greeting}>Welcome back,</Text>
         <View style={styles.userNameContainer}>

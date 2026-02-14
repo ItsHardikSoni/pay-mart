@@ -236,6 +236,7 @@ export default function AccountScreen() {
         <ScrollView 
           style={styles.container}
           contentContainerStyle={{ paddingBottom: insets.bottom }}
+          showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.light.primary]} />}
         >
           <View style={styles.header}>

@@ -74,7 +74,7 @@ const HelpAndSupportScreen = () => {
         </TouchableOpacity>
         <Text style={styles.title}>Help & Support</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Frequently Asked Questions</Text>
           {faqs.map((faq, index) => (
