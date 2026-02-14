@@ -2,11 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useSession } from '../../context/SessionProvider';
 import { Colors } from '../../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../supabaseClient';
+import { HelloWave } from '../../components/hello-wave';
 
 const QuickAction = ({ icon, label, screen }) => (
   <Link href={screen} asChild>
@@ -28,16 +29,14 @@ const HowItWorksStep = ({ icon, title, description }) => (
 );
 
 export default function HomeScreen() {
-  const { isLoggedIn, logout } = useSession();
+  const { isLoggedIn } = useSession();
   const [fullName, setFullName] = useState('Shopper');
 
   useEffect(() => {
     const fetchUserName = async () => {
       try {
         const identifier = await AsyncStorage.getItem('paymart:loginIdentifier');
-        if (!identifier) {
-          return;
-        }
+        if (!identifier) return;
 
         const { data, error } = await supabase
           .from('users')
@@ -67,7 +66,10 @@ export default function HomeScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.greeting}>Welcome back,</Text>
-        <Text style={styles.userName}>{fullName} 👋</Text>
+        <View style={styles.userNameContainer}>
+            <Text style={styles.userName}>{fullName}</Text>
+            <HelloWave />
+        </View>
       </View>
 
       <View style={styles.promoBanner}>
@@ -90,7 +92,7 @@ export default function HomeScreen() {
         <HowItWorksStep
             icon="scan-circle-outline"
             title="Scan & Add to Cart"
-            description="Use your phone’s camera to scan product barcodes. Items are instantly added to your digital cart."
+            description="Use your phone&apos;s camera to scan product barcodes. Items are instantly added to your digital cart."
         />
         <HowItWorksStep
             icon="cart-outline"
@@ -128,6 +130,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  userNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   userName: {
     fontSize: 28,
