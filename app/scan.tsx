@@ -3,29 +3,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../supabaseClient';
-import { cartState } from './cartState';
 import { Colors } from '../constants/theme';
-import { useRouter } from 'expo-router'; 
+import { cartState } from '../context/cartState';
+import { supabase } from '../supabaseClient';
 
 // Haversine formula to calculate distance
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371e3; // metres
-  const φ1 = lat1 * Math.PI/180;
-  const φ2 = lat2 * Math.PI/180;
-  const Δφ = (lat2-lat1) * Math.PI/180;
-  const Δλ = (lon2-lon1) * Math.PI/180;
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // in metres
 }
 
 const ALLOWED_LOCATION = {
   latitude: 25.610465587079343, // Griham Hostel
-  longitude: 85.05561450520987, 
+  longitude: 85.05561450520987,
 };
 const MAX_DISTANCE = 100; // in meters
 
@@ -61,27 +61,27 @@ export default function ScanScreen() {
 
   useEffect(() => {
     const setupAudio = async () => {
-        try {
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: false,
-            });
-            const { sound } = await Audio.Sound.createAsync(require('../assets/sounds/beep.mp3'));
-            soundRef.current = sound;
-        } catch (error) {
-            console.error('Failed to setup audio:', error);
-        }
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+        const { sound } = await Audio.Sound.createAsync(require('../assets/sounds/beep.mp3'));
+        soundRef.current = sound;
+      } catch (error) {
+        console.error('Failed to setup audio:', error);
+      }
     };
 
     setupAudio();
 
     return () => {
-        if (soundRef.current) {
-            soundRef.current.unloadAsync();
-        }
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
     };
   }, []);
 
@@ -93,19 +93,19 @@ export default function ScanScreen() {
       try {
         let { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted') {
-            status = (await Location.requestForegroundPermissionsAsync()).status;
+          status = (await Location.requestForegroundPermissionsAsync()).status;
         }
         if (status !== 'granted') {
-            setLocationError('Location permission not granted. Please enable it in app settings.');
-            return;
+          setLocationError('Location permission not granted. Please enable it in app settings.');
+          return;
         }
 
         const servicesEnabled = await Location.hasServicesEnabledAsync();
         if (!servicesEnabled) {
-            setLocationError('Location services are disabled. Please enable them to use the scanner.');
-            return;
+          setLocationError('Location services are disabled. Please enable them to use the scanner.');
+          return;
         }
-        
+
         setLocationError(null); // Clear initial message
 
         locationSubscription = await Location.watchPositionAsync(
@@ -148,11 +148,11 @@ export default function ScanScreen() {
 
   const playSound = useCallback(async () => {
     if (soundRef.current) {
-        try {
-            await soundRef.current.setStatusAsync({ shouldPlay: true, positionMillis: 0 });
-        } catch (error) {
-            console.error('Error playing sound:', error);
-        }
+      try {
+        await soundRef.current.setStatusAsync({ shouldPlay: true, positionMillis: 0 });
+      } catch (error) {
+        console.error('Error playing sound:', error);
+      }
     }
   }, []);
 
@@ -195,8 +195,8 @@ export default function ScanScreen() {
     if (!selectedProduct) return;
     const qtyNumber = parseInt(quantity, 10);
     if (isNaN(qtyNumber) || qtyNumber <= 0) {
-        Alert.alert('Invalid quantity', 'Please enter a valid quantity.');
-        return;
+      Alert.alert('Invalid quantity', 'Please enter a valid quantity.');
+      return;
     }
 
     const trimmedName = selectedProduct.name.trim();
@@ -205,14 +205,14 @@ export default function ScanScreen() {
     const totalQuantity = (existingItem ? existingItem.quantity : 0) + qtyNumber;
 
     if (totalQuantity > selectedProduct.stock) {
-        Alert.alert('Stock Alert', `You can only add ${selectedProduct.stock - (existingItem ? existingItem.quantity : 0)} more of this item.`);
-        return;
+      Alert.alert('Stock Alert', `You can only add ${selectedProduct.stock - (existingItem ? existingItem.quantity : 0)} more of this item.`);
+      return;
     }
 
     if (existingItem) {
-        existingItem.quantity += qtyNumber;
+      existingItem.quantity += qtyNumber;
     } else {
-        cartState.items.push({ id: selectedProduct.id, name: trimmedName, mrp: selectedProduct.mrp, quantity: qtyNumber });
+      cartState.items.push({ id: selectedProduct.id, name: trimmedName, mrp: selectedProduct.mrp, quantity: qtyNumber });
     }
 
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -225,7 +225,7 @@ export default function ScanScreen() {
 
   const updateQuantity = (amount: number) => {
     if (!selectedProduct) return;
-    
+
     const currentQuantity = parseInt(quantity, 10) || 0;
     const existingItem = cartState.items.find(item => item.id === selectedProduct.id);
     const alreadyInCart = existingItem ? existingItem.quantity : 0;
@@ -233,12 +233,12 @@ export default function ScanScreen() {
     let newQuantity = currentQuantity + amount;
 
     if (newQuantity < 1) {
-        newQuantity = 1;
+      newQuantity = 1;
     }
 
     if ((alreadyInCart + newQuantity) > selectedProduct.stock) {
-        newQuantity = selectedProduct.stock - alreadyInCart;
-        if (newQuantity < 1) newQuantity = 1; // Ensure we don't go below 1
+      newQuantity = selectedProduct.stock - alreadyInCart;
+      if (newQuantity < 1) newQuantity = 1; // Ensure we don't go below 1
     }
 
     setQuantity(String(newQuantity));
@@ -289,7 +289,7 @@ export default function ScanScreen() {
     setScanned(false);
     setShowCamera(true);
   };
-  
+
   if (!cameraPermission) return <View />;
 
   if (!cameraPermission.granted) {
@@ -345,41 +345,41 @@ export default function ScanScreen() {
 
           {selectedProduct && (
             <View style={styles.productDetailsContainer}>
-                <View style={styles.modalBody}>
-                  <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
-                  <Text style={styles.modalSubtitle}>Barcode: {selectedProduct.barcode}</Text>
-                  <View style={styles.modalPriceRow}>
-                    <View>
-                      <Text style={styles.priceLabel}>MRP</Text>
-                      <Text style={styles.priceValue}>₹{selectedProduct.mrp.toFixed(2)}</Text>
-                    </View>
-                    <View style={styles.discountPill}><Text style={styles.discountText}>{selectedProduct.discount_rate}₹ Save</Text></View>
+              <View style={styles.modalBody}>
+                <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
+                <Text style={styles.modalSubtitle}>Barcode: {selectedProduct.barcode}</Text>
+                <View style={styles.modalPriceRow}>
+                  <View>
+                    <Text style={styles.priceLabel}>MRP</Text>
+                    <Text style={styles.priceValue}>₹{selectedProduct.mrp.toFixed(2)}</Text>
                   </View>
-                  <Text style={styles.stockText}>Stock available: {selectedProduct.stock}</Text>
-                  <View style={styles.quantityRow}>
-                    <Text style={styles.modalText}>Quantity</Text>
-                    <View style={styles.quantityControl}>
-                        <TouchableOpacity
-                            style={styles.quantityButton}
-                            onPress={() => updateQuantity(-1)}
-                        >
-                            <Ionicons name="remove" size={22} color={Colors.light.primary} />
-                        </TouchableOpacity>
-                        <Text style={styles.quantityValue}>{quantity}</Text>
-                        <TouchableOpacity
-                            style={[styles.quantityButton, isIncreaseDisabled() && styles.disabledQuantityButton]}
-                            onPress={() => updateQuantity(1)}
-                            disabled={isIncreaseDisabled()}
-                        >
-                            <Ionicons name="add" size={22} color={isIncreaseDisabled() ? '#999' : Colors.light.primary} />
-                        </TouchableOpacity>
-                    </View>
+                  <View style={styles.discountPill}><Text style={styles.discountText}>{selectedProduct.discount_rate}₹ Save</Text></View>
+                </View>
+                <Text style={styles.stockText}>Stock available: {selectedProduct.stock}</Text>
+                <View style={styles.quantityRow}>
+                  <Text style={styles.modalText}>Quantity</Text>
+                  <View style={styles.quantityControl}>
+                    <TouchableOpacity
+                      style={styles.quantityButton}
+                      onPress={() => updateQuantity(-1)}
+                    >
+                      <Ionicons name="remove" size={22} color={Colors.light.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.quantityValue}>{quantity}</Text>
+                    <TouchableOpacity
+                      style={[styles.quantityButton, isIncreaseDisabled() && styles.disabledQuantityButton]}
+                      onPress={() => updateQuantity(1)}
+                      disabled={isIncreaseDisabled()}
+                    >
+                      <Ionicons name="add" size={22} color={isIncreaseDisabled() ? '#999' : Colors.light.primary} />
+                    </TouchableOpacity>
                   </View>
                 </View>
-                <View style={styles.modalFooter}>
-                  <TouchableOpacity style={styles.secondaryButton} onPress={() => setSelectedProduct(null)}><Text style={styles.secondaryButtonText}>Cancel</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}><Text style={styles.addToCartButtonText}>Add to Cart</Text></TouchableOpacity>
-                </View>
+              </View>
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.secondaryButton} onPress={() => setSelectedProduct(null)}><Text style={styles.secondaryButtonText}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}><Text style={styles.addToCartButtonText}>Add to Cart</Text></TouchableOpacity>
+              </View>
             </View>
           )}
         </ScrollView>
@@ -436,18 +436,18 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   quantityButton: {
-      padding: 8,
-      backgroundColor: '#f0f2f5',
-      borderRadius: 20,
+    padding: 8,
+    backgroundColor: '#f0f2f5',
+    borderRadius: 20,
   },
   disabledQuantityButton: {
     backgroundColor: '#e0e0e0',
   },
   quantityValue: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginHorizontal: 15,
-      color: '#333',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginHorizontal: 15,
+    color: '#333',
   },
   modalFooter: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   secondaryButton: { flex: 1, padding: 14, alignItems: 'center', backgroundColor: '#f9f9f9' },

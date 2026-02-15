@@ -6,9 +6,9 @@ import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal,
 import RazorpayCheckout from 'react-native-razorpay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/theme';
+import { CartItem, cartState } from '../../context/cartState';
 import { useSession } from '../../context/SessionProvider';
 import { supabase } from '../../supabaseClient';
-import { CartItem, cartState } from '../cartState';
 
 export default function CartScreen() {
   const [cartItems, setCartItems] = useState(cartState.items);
