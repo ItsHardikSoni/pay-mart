@@ -23,12 +23,6 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * c; // in metres
 }
 
-const ALLOWED_LOCATION = {
-  latitude: 25.610465587079343, // Griham Hostel
-  longitude: 85.05561450520987,
-};
-const MAX_DISTANCE = 100; // in meters
-
 type Product = {
   id: string;
   barcode: string;
@@ -44,7 +38,14 @@ export default function ScanScreen() {
   const [manualBarcode, setManualBarcode] = useState('');
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [locationError, setLocationError] = useState<string | null>('Initializing location services...');
+  const [locationError, setLocationError] = useState<string | null>('Initializing...');
+
+  // State for real-time location settings
+  const [allowedLatitude, setAllowedLatitude] = useState<number | null>(null);
+  const [allowedLongitude, setAllowedLongitude] = useState<number | null>(null);
+  const [maxDistance, setMaxDistance] = useState<number | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const insets = useSafeAreaInsets();
   const [scanned, setScanned] = useState(false);
@@ -62,41 +63,61 @@ export default function ScanScreen() {
   useEffect(() => {
     const setupAudio = async () => {
       try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-        });
+        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
         const { sound } = await Audio.Sound.createAsync(require('../assets/sounds/beep.mp3'));
         soundRef.current = sound;
-      } catch (error) {
-        console.error('Failed to setup audio:', error);
-      }
+      } catch (error) { console.error('Failed to setup audio:', error); }
     };
-
     setupAudio();
+    return () => { soundRef.current?.unloadAsync(); };
+  }, []);
 
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
+  // Effect for fetching location settings every second
+  useEffect(() => {
+    const fetchSettings = async (isInitial: boolean) => {
+      if (isInitial) {
+        setSettingsLoading(true);
+      }
+      try {
+        const { data, error } = await supabase.from('admin_settings').select('latitude, longitude, max_distance').single();
+        if (error) throw error;
+        if (data) {
+          setAllowedLatitude(data.latitude);
+          setAllowedLongitude(data.longitude);
+          setMaxDistance(data.max_distance);
+          if (settingsError) setSettingsError(null); // Clear error on successful fetch
+        } else {
+          throw new Error("Location settings not found in database.");
+        }
+      } catch (error: any) {
+        setSettingsError("Failed to update location settings.");
+        console.error("Error fetching settings:", error);
+      } finally {
+        if (isInitial) {
+          setSettingsLoading(false);
+        }
       }
     };
+
+    fetchSettings(true); // Fetch immediately on mount
+
+    const intervalId = setInterval(() => fetchSettings(false), 1000); // Poll every second
+
+    return () => clearInterval(intervalId); // Cleanup
   }, []);
 
   useEffect(() => {
+    if (settingsLoading || settingsError) return;
+
     let locationSubscription: Location.LocationSubscription | undefined;
     let serviceCheckInterval: ReturnType<typeof setInterval> | undefined;
 
     const startWatching = async () => {
       try {
         let { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') status = (await Location.requestForegroundPermissionsAsync()).status;
         if (status !== 'granted') {
-          status = (await Location.requestForegroundPermissionsAsync()).status;
-        }
-        if (status !== 'granted') {
-          setLocationError('Location permission not granted. Please enable it in app settings.');
+          setLocationError('Location permission is required. Please enable it in settings.');
           return;
         }
 
@@ -106,56 +127,50 @@ export default function ScanScreen() {
           return;
         }
 
-        setLocationError(null); // Clear initial message
+        setLocationError(null);
 
         locationSubscription = await Location.watchPositionAsync(
           { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1 },
           (newLocation) => {
             setLocation(newLocation);
-            setLocationError(null);
-            const distance = getDistance(newLocation.coords.latitude, newLocation.coords.longitude, ALLOWED_LOCATION.latitude, ALLOWED_LOCATION.longitude);
-            if (distance > MAX_DISTANCE) {
-              setLocationError('You are outside the allowed scanning area.');
+            if (allowedLatitude && allowedLongitude && maxDistance) {
+              const distance = getDistance(newLocation.coords.latitude, newLocation.coords.longitude, allowedLatitude, allowedLongitude);
+              if (distance > maxDistance) {
+                setLocationError(`You are outside the allowed scanning area (${Math.round(distance)}m away).`);
+              } else {
+                setLocationError(null); // Location OK
+              }
+            } else {
+              setLocationError('Cannot verify location, settings are missing.');
             }
           }
         );
 
         serviceCheckInterval = setInterval(async () => {
-          const servicesStillEnabled = await Location.hasServicesEnabledAsync();
-          if (!servicesStillEnabled) {
+          if (!(await Location.hasServicesEnabledAsync())) {
             setLocation(null);
             setLocationError('Location services were disabled. Please re-enable them.');
-            if (locationSubscription) {
-              locationSubscription.remove();
-              locationSubscription = undefined;
-            }
+            locationSubscription?.remove();
+            locationSubscription = undefined;
           }
         }, 3000);
 
       } catch (err) {
-        console.error('Location setup failed:', err);
-        setLocationError('Failed to initialize location services. Please ensure location is enabled.');
+        setLocationError('Failed to initialize location services.');
       }
     };
 
     startWatching();
 
     return () => {
-      if (locationSubscription) locationSubscription.remove();
+      locationSubscription?.remove();
       if (serviceCheckInterval) clearInterval(serviceCheckInterval);
     };
-  }, []);
+  }, [settingsLoading, settingsError, allowedLatitude, allowedLongitude, maxDistance]);
 
   const playSound = useCallback(async () => {
-    if (soundRef.current) {
-      try {
-        await soundRef.current.setStatusAsync({ shouldPlay: true, positionMillis: 0 });
-      } catch (error) {
-        console.error('Error playing sound:', error);
-      }
-    }
+    await soundRef.current?.setStatusAsync({ shouldPlay: true, positionMillis: 0 });
   }, []);
-
 
   const startLineAnimation = useCallback(() => {
     Animated.loop(Animated.sequence([
@@ -171,21 +186,15 @@ export default function ScanScreen() {
   const fetchProductByBarcode = useCallback(async (code: string) => {
     setProductNotFoundError(null);
     setSelectedProduct(null);
+    setIsFetchingProduct(true);
     try {
-      setIsFetchingProduct(true);
       const { data, error } = await supabase.from('products').select('id, barcode, name, mrp, discount_rate, stock').eq('barcode', code.trim()).maybeSingle();
-      if (error) {
-        setProductNotFoundError('Could not fetch product details. Please try again.');
-        return;
-      }
-      if (!data) {
-        setProductNotFoundError('No product found for this barcode.');
-        return;
-      }
+      if (error) throw new Error('Could not fetch product details.');
+      if (!data) throw new Error('No product found for this barcode.');
       setSelectedProduct({ id: data.id.toString(), barcode: data.barcode, name: data.name.trim(), mrp: Number(data.mrp), discount_rate: Number(data.discount_rate ?? 0), stock: Number(data.stock ?? 0) });
       setQuantity('1');
-    } catch (err) {
-      setProductNotFoundError('Something went wrong while fetching product.');
+    } catch (err: any) {
+      setProductNotFoundError(err.message);
     } finally {
       setIsFetchingProduct(false);
     }
@@ -199,21 +208,16 @@ export default function ScanScreen() {
       return;
     }
 
-    const trimmedName = selectedProduct.name.trim();
-    const existingItem = cartState.items.find(item => item.id === selectedProduct.id && item.name.trim().toLowerCase() === trimmedName.toLowerCase());
-
-    const totalQuantity = (existingItem ? existingItem.quantity : 0) + qtyNumber;
+    const existingItem = cartState.items.find(item => item.id === selectedProduct.id);
+    const totalQuantity = (existingItem?.quantity || 0) + qtyNumber;
 
     if (totalQuantity > selectedProduct.stock) {
-      Alert.alert('Stock Alert', `You can only add ${selectedProduct.stock - (existingItem ? existingItem.quantity : 0)} more of this item.`);
+      Alert.alert('Stock Alert', `You can only add ${selectedProduct.stock - (existingItem?.quantity || 0)} more of this item.`);
       return;
     }
 
-    if (existingItem) {
-      existingItem.quantity += qtyNumber;
-    } else {
-      cartState.items.push({ id: selectedProduct.id, name: trimmedName, mrp: selectedProduct.mrp, quantity: qtyNumber });
-    }
+    if (existingItem) existingItem.quantity += qtyNumber;
+    else cartState.items.push({ id: selectedProduct.id, name: selectedProduct.name.trim(), mrp: selectedProduct.mrp, quantity: qtyNumber });
 
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastMessage(`${qtyNumber} x ${selectedProduct.name} added to cart.`);
@@ -225,37 +229,24 @@ export default function ScanScreen() {
 
   const updateQuantity = (amount: number) => {
     if (!selectedProduct) return;
-
     const currentQuantity = parseInt(quantity, 10) || 0;
-    const existingItem = cartState.items.find(item => item.id === selectedProduct.id);
-    const alreadyInCart = existingItem ? existingItem.quantity : 0;
-
-    let newQuantity = currentQuantity + amount;
-
-    if (newQuantity < 1) {
-      newQuantity = 1;
-    }
-
+    const alreadyInCart = cartState.items.find(item => item.id === selectedProduct.id)?.quantity || 0;
+    let newQuantity = Math.max(1, currentQuantity + amount);
     if ((alreadyInCart + newQuantity) > selectedProduct.stock) {
-      newQuantity = selectedProduct.stock - alreadyInCart;
-      if (newQuantity < 1) newQuantity = 1; // Ensure we don't go below 1
+      newQuantity = Math.max(1, selectedProduct.stock - alreadyInCart);
     }
-
     setQuantity(String(newQuantity));
   };
 
-
   const checkLocation = () => {
-    if (locationError) {
-      Alert.alert('Location Issue', locationError);
+    if (settingsError) { Alert.alert('Settings Error', settingsError); return false; }
+    if (locationError) { Alert.alert('Location Issue', locationError); return false; }
+    if (!location || !allowedLatitude || !allowedLongitude || !maxDistance) {
+      Alert.alert('Location Unavailable', 'Could not determine your location or settings. Please wait and try again.');
       return false;
     }
-    if (!location) {
-      Alert.alert('Location Unavailable', 'Could not determine your location. Please ensure location services are enabled.');
-      return false;
-    }
-    const distance = getDistance(location.coords.latitude, location.coords.longitude, ALLOWED_LOCATION.latitude, ALLOWED_LOCATION.longitude);
-    if (distance > MAX_DISTANCE) {
+    const distance = getDistance(location.coords.latitude, location.coords.longitude, allowedLatitude, allowedLongitude);
+    if (distance > maxDistance) {
       Alert.alert('Out of Range', 'You have moved too far from the allowed scanning area.');
       return false;
     }
@@ -263,10 +254,7 @@ export default function ScanScreen() {
   };
 
   const handleBarCodeScanned = async ({ data }: BarcodeScanningResult) => {
-    if (!checkLocation()) {
-      setShowCamera(false);
-      return;
-    }
+    if (!checkLocation()) { setShowCamera(false); return; }
     setScanned(true);
     setManualBarcode(data);
     setShowCamera(false);
@@ -276,10 +264,7 @@ export default function ScanScreen() {
 
   const handleManualBarcodeSearch = async () => {
     if (!checkLocation()) return;
-    if (manualBarcode.trim() === '') {
-      Alert.alert('Empty Barcode', 'Please enter a barcode number.');
-      return;
-    }
+    if (manualBarcode.trim() === '') { Alert.alert('Empty Barcode', 'Please enter a barcode number.'); return; }
     await playSound();
     fetchProductByBarcode(manualBarcode.trim());
   };
@@ -290,35 +275,39 @@ export default function ScanScreen() {
     setShowCamera(true);
   };
 
+  if (settingsLoading) {
+    return (
+      <View style={styles.errorContainerCentered}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <Text style={styles.errorText}>Loading location settings...</Text>
+      </View>
+    );
+  }
+
   if (!cameraPermission) return <View />;
 
   if (!cameraPermission.granted) {
     return (
       <View style={styles.errorContainerCentered}>
         <Text style={styles.errorText}>Camera permission is required to scan products.</Text>
-        <TouchableOpacity onPress={requestCameraPermission} style={styles.goBackButton}>
-          <Text style={styles.goBackButtonText}>Grant Permission</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={requestCameraPermission} style={styles.goBackButton}><Text style={styles.goBackButtonText}>Grant Permission</Text></TouchableOpacity>
       </View>
     );
   }
 
-  if (locationError) {
+  if (settingsError || (locationError && !location)) {
     return (
       <View style={styles.errorContainerCentered}>
         <Ionicons name="location-outline" size={80} color="#E0E0E0" />
-        <Text style={styles.errorText}>{locationError}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.goBackButton}>
-          <Text style={styles.goBackButtonText}>Go Back</Text>
-        </TouchableOpacity>
+        <Text style={styles.errorText}>{settingsError || locationError}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.goBackButton}><Text style={styles.goBackButtonText}>Go Back</Text></TouchableOpacity>
       </View>
     );
   }
 
   const isIncreaseDisabled = () => {
     if (!selectedProduct) return true;
-    const existingItem = cartState.items.find(item => item.id === selectedProduct.id);
-    const alreadyInCart = existingItem ? existingItem.quantity : 0;
+    const alreadyInCart = cartState.items.find(item => item.id === selectedProduct.id)?.quantity || 0;
     const currentQuantity = parseInt(quantity, 10) || 0;
     return (alreadyInCart + currentQuantity) >= selectedProduct.stock;
   };
@@ -331,10 +320,11 @@ export default function ScanScreen() {
             <Text style={styles.manualEntryTitle}>Manual Barcode Entry</Text>
             <View style={styles.inputContainer}>
               <TextInput style={styles.input} placeholder="Enter barcode number" value={manualBarcode} onChangeText={setManualBarcode} keyboardType="numeric" maxLength={13} />
-              <TouchableOpacity style={styles.searchButton} onPress={handleManualBarcodeSearch} disabled={!location}><Ionicons name="search" size={24} color="white" /></TouchableOpacity>
+              <TouchableOpacity style={styles.searchButton} onPress={handleManualBarcodeSearch} disabled={!!locationError}><Ionicons name="search" size={24} color="white" /></TouchableOpacity>
             </View>
             <Text style={styles.inputCaption}>Use if the barcode is unreadable.</Text>
-            <TouchableOpacity style={[styles.startButton, !location && styles.disabledButton]} onPress={handleScanPress} disabled={!location}>
+            {locationError && <Text style={styles.inlineErrorText}>{locationError}</Text>}
+            <TouchableOpacity style={[styles.startButton, (!!locationError || !location) && styles.disabledButton]} onPress={handleScanPress} disabled={!!locationError || !location}>
               <Ionicons name="scan" size={20} color="white" />
               <Text style={styles.startButtonText}>Scan Products</Text>
             </TouchableOpacity>
@@ -345,7 +335,7 @@ export default function ScanScreen() {
 
           {selectedProduct && (
             <View style={styles.productDetailsContainer}>
-              <View style={styles.modalBody}>
+                 <View style={styles.modalBody}>
                 <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
                 <Text style={styles.modalSubtitle}>Barcode: {selectedProduct.barcode}</Text>
                 <View style={styles.modalPriceRow}>
@@ -359,20 +349,9 @@ export default function ScanScreen() {
                 <View style={styles.quantityRow}>
                   <Text style={styles.modalText}>Quantity</Text>
                   <View style={styles.quantityControl}>
-                    <TouchableOpacity
-                      style={styles.quantityButton}
-                      onPress={() => updateQuantity(-1)}
-                    >
-                      <Ionicons name="remove" size={22} color={Colors.light.primary} />
-                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(-1)}><Ionicons name="remove" size={22} color={Colors.light.primary} /></TouchableOpacity>
                     <Text style={styles.quantityValue}>{quantity}</Text>
-                    <TouchableOpacity
-                      style={[styles.quantityButton, isIncreaseDisabled() && styles.disabledQuantityButton]}
-                      onPress={() => updateQuantity(1)}
-                      disabled={isIncreaseDisabled()}
-                    >
-                      <Ionicons name="add" size={22} color={isIncreaseDisabled() ? '#999' : Colors.light.primary} />
-                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.quantityButton, isIncreaseDisabled() && styles.disabledQuantityButton]} onPress={() => updateQuantity(1)} disabled={isIncreaseDisabled()}><Ionicons name="add" size={22} color={isIncreaseDisabled() ? '#999' : Colors.light.primary} /></TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -405,6 +384,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f2f5', paddingHorizontal: 16 },
   errorContainerCentered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#fff' },
   errorText: { fontSize: 16, textAlign: 'center', color: '#333', marginBottom: 20 },
+  inlineErrorText: { fontSize: 14, textAlign: 'center', color: Colors.light.danger, marginTop: 12, marginBottom: -12 },
   goBackButton: { backgroundColor: Colors.light.primary, paddingHorizontal: 30, paddingVertical: 12, borderRadius: 8 },
   goBackButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   manualContainer: { backgroundColor: 'white', borderRadius: 16, padding: 24 },
@@ -430,25 +410,10 @@ const styles = StyleSheet.create({
   stockText: { fontSize: 14, color: '#4caf50', marginTop: 8, fontWeight: '500' },
   quantityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
   modalText: { fontSize: 16, fontWeight: '500', color: '#333' },
-  quantityControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  quantityButton: {
-    padding: 8,
-    backgroundColor: '#f0f2f5',
-    borderRadius: 20,
-  },
-  disabledQuantityButton: {
-    backgroundColor: '#e0e0e0',
-  },
-  quantityValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginHorizontal: 15,
-    color: '#333',
-  },
+  quantityControl: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  quantityButton: { padding: 8, backgroundColor: '#f0f2f5', borderRadius: 20 },
+  disabledQuantityButton: { backgroundColor: '#e0e0e0' },
+  quantityValue: { fontSize: 18, fontWeight: 'bold', marginHorizontal: 15, color: '#333' },
   modalFooter: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   secondaryButton: { flex: 1, padding: 14, alignItems: 'center', backgroundColor: '#f9f9f9' },
   secondaryButtonText: { fontSize: 16, color: '#555', fontWeight: '500' },

@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -17,13 +18,6 @@ import {
 } from 'react-native';
 import { Colors } from '../constants/theme';
 import { supabase } from '../supabaseClient';
-
-// --- Location Configuration ---
-const ALLOWED_LOCATION = {
-  latitude: 25.610465587079343, // Griham Hostel
-  longitude: 85.05561450520987,
-};
-const MAX_DISTANCE = 100; // in meters
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371e3; // metres
@@ -39,17 +33,24 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 
   return R * c; // in metres
 }
-// -----------------------------
 
 export default function AdminLoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [locationError, setLocationError] = useState<string | null>('Initializing location services...');
+  const [locationError, setLocationError] = useState<string | null>('Initializing...');
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const router = useRouter();
+
+  // State for location settings
+  const [allowedLatitude, setAllowedLatitude] = useState<number | null>(null);
+  const [allowedLongitude, setAllowedLongitude] = useState<number | null>(null);
+  const [maxDistance, setMaxDistance] = useState<number | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (toastMessage) {
@@ -60,9 +61,52 @@ export default function AdminLoginScreen() {
     }
   }, [toastMessage]);
 
+  // Effect for fetching location settings every second
   useEffect(() => {
+    const fetchSettings = async (isInitial: boolean) => {
+      if (isInitial) {
+        setSettingsLoading(true);
+      }
+      try {
+        const { data, error } = await supabase.from('admin_settings').select('latitude, longitude, max_distance').single();
+        if (error) throw error;
+        if (data) {
+          setAllowedLatitude(data.latitude);
+          setAllowedLongitude(data.longitude);
+          setMaxDistance(data.max_distance);
+          if (settingsError) setSettingsError(null); // Clear error on successful fetch
+        } else {
+          throw new Error("Location settings not found in database.");
+        }
+      } catch (error: any) {
+        setSettingsError("Failed to update location settings.");
+        console.error("Error fetching settings:", error);
+      } finally {
+        if (isInitial) {
+          setSettingsLoading(false);
+        }
+      }
+    };
+
+    fetchSettings(true); // Fetch immediately on mount
+
+    const intervalId = setInterval(() => fetchSettings(false), 1000); // Poll every second
+
+    return () => clearInterval(intervalId); // Cleanup
+  }, []);
+
+  useEffect(() => {
+    if (settingsLoading) {
+        setLocationError("Loading security settings...");
+        return;
+    }
+    if (settingsError) {
+        setLocationError(settingsError);
+        return;
+    }
+
     let locationSubscription: Location.LocationSubscription | undefined;
-    let serviceCheckInterval: number | undefined; // Correct type for setInterval in RN
+    let serviceCheckInterval: ReturnType<typeof setInterval> | undefined;
 
     const startLocationTracking = async () => {
       try {
@@ -72,12 +116,10 @@ export default function AdminLoginScreen() {
           return;
         }
 
-        // Main loop to check services and manage the watcher
         serviceCheckInterval = setInterval(async () => {
           const servicesEnabled = await Location.hasServicesEnabledAsync();
           if (!servicesEnabled) {
             setLocationError('Location services are disabled. Please enable them.');
-            // Stop watching if services are off
             if (locationSubscription) {
               locationSubscription.remove();
               locationSubscription = undefined;
@@ -85,18 +127,20 @@ export default function AdminLoginScreen() {
             return;
           }
 
-          // If services are on but we have no watcher, create one.
-          // This handles initial start and re-enabling services.
           if (!locationSubscription) {
             locationSubscription = await Location.watchPositionAsync(
               { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 1 },
               (newLocation) => {
                 setLocation(newLocation);
-                const distance = getDistance(newLocation.coords.latitude, newLocation.coords.longitude, ALLOWED_LOCATION.latitude, ALLOWED_LOCATION.longitude);
-                if (distance > MAX_DISTANCE) {
-                  setLocationError(`You are too far from the business location. (Distance: ${Math.round(distance)}m)`);
+                if(allowedLatitude && allowedLongitude && maxDistance){
+                    const distance = getDistance(newLocation.coords.latitude, newLocation.coords.longitude, allowedLatitude, allowedLongitude);
+                    if (distance > maxDistance) {
+                      setLocationError(`You are too far from the business location. (Distance: ${Math.round(distance)}m)`);
+                    } else {
+                      setLocationError(null); // Location and distance are OK!
+                    }
                 } else {
-                  setLocationError(null); // Location and distance are OK!
+                    setLocationError("Could not verify location. Settings are missing.");
                 }
               }
             );
@@ -119,9 +163,10 @@ export default function AdminLoginScreen() {
         clearInterval(serviceCheckInterval);
       }
     };
-  }, []);
+  }, [settingsLoading, settingsError, allowedLatitude, allowedLongitude, maxDistance]);
 
   const checkLocation = () => {
+    if (settingsError){ Alert.alert('Settings Error', settingsError); return false; }
     if (locationError) {
       Alert.alert('Location Issue', locationError);
       return false;
@@ -130,7 +175,7 @@ export default function AdminLoginScreen() {
       Alert.alert('Location Unavailable', 'Waiting for location data. Please ensure location services are enabled and try again shortly.');
       return false;
     }
-    return true; // The useEffect hook already handles distance checks
+    return true;
   };
 
   const handleLogin = async () => {
@@ -157,7 +202,7 @@ export default function AdminLoginScreen() {
       setTimeout(async () => {
         await AsyncStorage.setItem('paymart:adminLoggedIn', 'true');
         router.replace('/admin');
-      }, 3000);
+      }, 1500);
 
     } catch (err) {
       setToastMessage('An unexpected error occurred during login.');
@@ -170,15 +215,19 @@ export default function AdminLoginScreen() {
     let color = Colors.light.success;
     let text = 'Location OK';
 
-    if (locationError) {
+    if (settingsLoading) {
+        icon = 'reload-circle-outline';
+        color = '#ff9f43';
+        text = 'Loading security settings...'
+    } else if (locationError || settingsError) {
       icon = 'location-outline';
       color = Colors.light.danger;
-      text = locationError;
+      text = locationError || settingsError || 'An error occurred.';
     }
 
     return (
       <View style={[styles.locationStatus, { backgroundColor: color }]}>
-        <Ionicons name={icon} size={16} color="#fff" />
+        {settingsLoading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name={icon} size={16} color="#fff" />}
         <Text style={styles.locationText}>{text}</Text>
       </View>
     )
@@ -226,7 +275,7 @@ export default function AdminLoginScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.signInButton} onPress={handleLogin}>
+            <TouchableOpacity style={[styles.signInButton, (!!locationError || !!settingsError) && styles.disabledButton]} onPress={handleLogin} disabled={!!locationError || !!settingsError}>
               <Text style={styles.signInButtonText}>Login</Text>
             </TouchableOpacity>
           </View>
@@ -311,6 +360,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+   disabledButton: {
+    backgroundColor: '#A9A9A9',
+    shadowOpacity: 0.2,
   },
   signInButtonText: {
     color: '#fff',
