@@ -340,7 +340,21 @@ export default function AccountScreen() {
                     }}
                     showsVerticalScrollIndicator={false}
                   >
-                    {/* inputs */}
+                    <Text style={styles.inputLabel}>Name<Text style={styles.required}>*</Text></Text>
+                    <TextInput style={styles.input} onChangeText={setTempName} value={tempName} placeholder="Enter your name" />
+                    {!!nameError && <Text style={styles.errorText}>{nameError}</Text>}
+
+                    <Text style={styles.inputLabel}>Username<Text style={styles.required}>*</Text></Text>
+                    <TextInput style={styles.input} onChangeText={setTempUsername} value={tempUsername} placeholder="Enter your username" autoCapitalize="none" />
+                    {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
+
+                    <Text style={styles.inputLabel}>Phone<Text style={styles.required}>*</Text></Text>
+                    <TextInput style={styles.input} onChangeText={setTempPhone} value={tempPhone} placeholder="Enter your phone" keyboardType="phone-pad" />
+                    {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
+
+                    <Text style={styles.inputLabel}>Email<Text style={styles.required}>*</Text></Text>
+                    <TextInput style={styles.input} onChangeText={setTempEmail} value={tempEmail} placeholder="Enter your email" keyboardType="email-address" />
+                    {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
 
                     <TouchableOpacity
                       style={styles.saveButton}
