@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { Colors } from '../constants/theme';
-import LottieView from 'lottie-react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useRouter } from 'expo-router';
+import LottieView from 'lottie-react-native';
+import React, { useState } from 'react';
+import { Share, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { Colors } from '../constants/theme';
 
 const ReferAndEarnScreen = () => {
   const router = useRouter();
@@ -41,30 +41,30 @@ const ReferAndEarnScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Refer & Earn</Text>
-        <View style={{width: 24}}/>
+        <View style={{ width: 24 }} />
       </View>
 
-        <LottieView
-          source={require('../assets/lottie/refer-and-earn.json')} // Make sure you have this Lottie file
-          autoPlay
-          loop
-          style={styles.lottieAnimation}
-        />
+      <LottieView
+        source={require('../assets/lottie/refer-and-earn.json')} // Make sure you have this Lottie file
+        autoPlay
+        loop
+        style={styles.lottieAnimation}
+      />
       <View style={styles.content}>
         <Text style={styles.title}>Invite Friends, Get Rewards!</Text>
         <Text style={styles.subtitle}>Share your referral code with friends and you'll both get amazing discounts on your next purchase.</Text>
 
         <View style={styles.referralCodeContainer}>
-            <Text style={styles.referralCodeText}>{referralCode}</Text>
-            <TouchableOpacity onPress={onCopy} style={styles.copyButton}>
-                <Ionicons name="copy-outline" size={22} color={Colors.light.primary} />
-            </TouchableOpacity>
+          <Text style={styles.referralCodeText}>{referralCode}</Text>
+          <TouchableOpacity onPress={onCopy} style={styles.copyButton}>
+            <Ionicons name="copy-outline" size={22} color={Colors.light.primary} />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={onShare} style={styles.shareButton}>
@@ -74,10 +74,10 @@ const ReferAndEarnScreen = () => {
       </View>
       {toastMessage ? (
         <View style={styles.toastContainer}>
-            <Text style={styles.toastText}>{toastMessage}</Text>
+          <Text style={styles.toastText}>{toastMessage}</Text>
         </View>
       ) : null}
-    </SafeAreaView>
+    </ScrollView>
   );
 };
 
@@ -182,9 +182,9 @@ const styles = StyleSheet.create({
     zIndex: 100
   },
   toastText: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: 'bold',
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

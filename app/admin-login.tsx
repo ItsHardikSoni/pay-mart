@@ -1,13 +1,13 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,30 +15,29 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Location from 'expo-location';
 import { Colors } from '../constants/theme';
 import { supabase } from '../supabaseClient';
 
 // --- Location Configuration ---
 const ALLOWED_LOCATION = {
   latitude: 25.610465587079343, // Griham Hostel
-  longitude: 85.05561450520987, 
+  longitude: 85.05561450520987,
 };
 const MAX_DISTANCE = 100; // in meters
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
-  
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  
-    return R * c; // in metres
+  const R = 6371e3; // metres
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // in metres
 }
 // -----------------------------
 
@@ -151,10 +150,10 @@ export default function AdminLoginScreen() {
         setToastType('error');
         return;
       }
-      
+
       setToastMessage('Login successful!');
       setToastType('success');
-      
+
       setTimeout(async () => {
         await AsyncStorage.setItem('paymart:adminLoggedIn', 'true');
         router.replace('/admin');
@@ -172,21 +171,21 @@ export default function AdminLoginScreen() {
     let text = 'Location OK';
 
     if (locationError) {
-        icon = 'location-outline';
-        color = Colors.light.danger;
-        text = locationError;
+      icon = 'location-outline';
+      color = Colors.light.danger;
+      text = locationError;
     }
 
     return (
-        <View style={[styles.locationStatus, { backgroundColor: color }]}>
-            <Ionicons name={icon} size={16} color="#fff" />
-            <Text style={styles.locationText}>{text}</Text>
-        </View>
+      <View style={[styles.locationStatus, { backgroundColor: color }]}>
+        <Ionicons name={icon} size={16} color="#fff" />
+        <Text style={styles.locationText}>{text}</Text>
+      </View>
     )
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
@@ -243,7 +242,7 @@ export default function AdminLoginScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -59,8 +58,8 @@ export default function SignupScreen() {
 
     const usernameRegex = /^[a-zA-Z0-9_]+$/;
     if (!usernameRegex.test(username)) {
-        setUsernameError('Username must contain only characters, digits, and underscores (_)');
-        valid = false;
+      setUsernameError('Username must contain only characters, digits, and underscores (_)');
+      valid = false;
     }
 
     if (phoneNumber.length !== 10) {
@@ -92,15 +91,15 @@ export default function SignupScreen() {
       try {
         // Check if username is already taken
         const { data: usernameData, error: usernameError } = await supabase
-            .from('users')
-            .select('username')
-            .eq('username', username);
+          .from('users')
+          .select('username')
+          .eq('username', username);
 
         if (usernameError) throw usernameError;
         if (usernameData && usernameData.length > 0) {
-            setToastMessage('Username already taken');
-            setToastType('error');
-            return;
+          setToastMessage('Username already taken');
+          setToastType('error');
+          return;
         }
 
         // Check if email or phone number already exists
@@ -152,125 +151,125 @@ export default function SignupScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-          <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-                <Ionicons name="person-add-outline" size={80} color={Colors.light.primary} />
-                <Text style={styles.title}>Create an Account</Text>
-                <Text style={styles.subtitle}>Start your journey with Pay Mart</Text>
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Ionicons name="person-add-outline" size={80} color={Colors.light.primary} />
+            <Text style={styles.title}>Create an Account</Text>
+            <Text style={styles.subtitle}>Start your journey with Pay Mart</Text>
+          </View>
+
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Ionicons name="person-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Full Name"
+                value={fullName}
+                onChangeText={setFullName}
+                placeholderTextColor={Colors.light.icon}
+              />
             </View>
+            {!!fullNameError && <Text style={styles.errorText}>{fullNameError}</Text>}
 
-            <View style={styles.formContainer}>
-                <View style={styles.inputGroup}>
-                    <Ionicons name="person-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                    <TextInput
-                    style={styles.input}
-                    placeholder="Full Name"
-                    value={fullName}
-                    onChangeText={setFullName}
-                    placeholderTextColor={Colors.light.icon}
-                    />
-                </View>
-                {!!fullNameError && <Text style={styles.errorText}>{fullNameError}</Text>}
-
-                <View style={styles.inputGroup}>
-                    <Ionicons name="at-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                    <TextInput
-                    style={styles.input}
-                    placeholder="Username"
-                    value={username}
-                    onChangeText={setUsername}
-                    autoCapitalize="none"
-                    placeholderTextColor={Colors.light.icon}
-                    />
-                </View>
-                {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
-
-                <View style={styles.inputGroup}>
-                    <Ionicons name="call-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                    <TextInput
-                    style={styles.input}
-                    placeholder="Phone Number"
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    placeholderTextColor={Colors.light.icon}
-                    />
-                </View>
-                {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
-
-                <View style={styles.inputGroup}>
-                    <Ionicons name="mail-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                    <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    placeholderTextColor={Colors.light.icon}
-                    />
-                </View>
-                {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
-
-                <View style={styles.inputGroup}>
-                    <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry={!showPassword}
-                        placeholderTextColor={Colors.light.icon}
-                    />
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
-                    </TouchableOpacity>
-                </View>
-                {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
-
-                <View style={styles.inputGroup}>
-                    <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Confirm Password"
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry={!showConfirmPassword}
-                        placeholderTextColor={Colors.light.icon}
-                    />
-                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
-                        <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
-                    </TouchableOpacity>
-                </View>
-                {!!confirmPasswordError && <Text style={styles.errorText}>{confirmPasswordError}</Text>}
-
-                <TouchableOpacity style={styles.signInButton} onPress={handleSignUp}>
-                    <Text style={styles.signInButtonText}>Sign Up</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.orText}>or continue with</Text>
-
-                <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
-                    <FontAwesome name="google" size={20} color="#DB4437" />
-                    <Text style={styles.googleButtonText}>Sign Up with Google</Text>
-                </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Ionicons name="at-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                placeholderTextColor={Colors.light.icon}
+              />
             </View>
-            <View style={styles.footer}>
-                <Text style={styles.footerText}>Already have an account? </Text>
-                <Link href="/login" asChild>
-                    <TouchableOpacity>
-                        <Text style={styles.signInLink}>Sign in</Text>
-                    </TouchableOpacity>
-                </Link>
+            {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
+
+            <View style={styles.inputGroup}>
+              <Ionicons name="call-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Phone Number"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+                maxLength={10}
+                placeholderTextColor={Colors.light.icon}
+              />
             </View>
-          </ScrollView>
-          
+            {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
+
+            <View style={styles.inputGroup}>
+              <Ionicons name="mail-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor={Colors.light.icon}
+              />
+            </View>
+            {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
+
+            <View style={styles.inputGroup}>
+              <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholderTextColor={Colors.light.icon}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
+              </TouchableOpacity>
+            </View>
+            {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+
+            <View style={styles.inputGroup}>
+              <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                placeholderTextColor={Colors.light.icon}
+              />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
+              </TouchableOpacity>
+            </View>
+            {!!confirmPasswordError && <Text style={styles.errorText}>{confirmPasswordError}</Text>}
+
+            <TouchableOpacity style={styles.signInButton} onPress={handleSignUp}>
+              <Text style={styles.signInButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.orText}>or continue with</Text>
+
+            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
+              <FontAwesome name="google" size={20} color="#DB4437" />
+              <Text style={styles.googleButtonText}>Sign Up with Google</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <Link href="/login" asChild>
+              <TouchableOpacity>
+                <Text style={styles.signInLink}>Sign in</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        </ScrollView>
+
 
         {!!toastMessage && (
           <View style={[styles.toast, toastType === 'success' ? styles.successToast : styles.errorToast]}>
@@ -278,7 +277,7 @@ export default function SignupScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -339,7 +338,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   eyeIcon: {
-      padding: 8,
+    padding: 8,
   },
   signInButton: {
     backgroundColor: Colors.light.primary,
@@ -359,10 +358,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   orText: {
-      textAlign: 'center',
-      marginVertical: 24,
-      color: Colors.light.icon,
-      fontSize: 14,
+    textAlign: 'center',
+    marginVertical: 24,
+    color: Colors.light.icon,
+    fontSize: 14,
   },
   googleButton: {
     backgroundColor: '#fff',
@@ -381,14 +380,14 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   footer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: 30,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30,
   },
   footerText: {
-      fontSize: 14,
-      color: Colors.light.icon,
+    fontSize: 14,
+    color: Colors.light.icon,
   },
   signInLink: {
     fontSize: 14,
@@ -404,17 +403,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   successToast: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.light.success,
   },
   errorToast: {
-    backgroundColor: '#F44336',
+    backgroundColor: Colors.light.danger,
   },
   toastText: {
     color: 'white',
     textAlign: 'center',
   },
   errorText: {
-    color: Colors.danger,
+    color: Colors.light.danger,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 12,

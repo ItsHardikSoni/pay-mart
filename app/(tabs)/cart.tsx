@@ -2,10 +2,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import RazorpayCheckout from 'react-native-razorpay';
-import { Colors } from '../../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors } from '../../constants/theme';
 import { useSession } from '../../context/SessionProvider';
 import { supabase } from '../../supabaseClient';
 import { CartItem, cartState } from '../cartState';
@@ -404,7 +404,7 @@ export default function CartScreen() {
               ) : (
                 <>
                   <Text style={styles.modalTitle}>Choose Payment Method</Text>
-  
+
                   <TouchableOpacity
                     style={styles.paymentOptionCard}
                     onPress={handleRazorpayPayment}
@@ -420,7 +420,7 @@ export default function CartScreen() {
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="#999" />
                   </TouchableOpacity>
-  
+
                   <TouchableOpacity
                     style={styles.paymentOptionCard}
                     onPress={handleCashPayment}
@@ -436,7 +436,7 @@ export default function CartScreen() {
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="#999" />
                   </TouchableOpacity>
-  
+
                   <TouchableOpacity
                     style={styles.cancelButton}
                     onPress={() => setPaymentModalVisible(false)}
@@ -451,7 +451,7 @@ export default function CartScreen() {
       </TouchableWithoutFeedback>
     </Modal>
   );
-  
+
   const renderCashierModal = () => (
     <Modal
       animationType="slide"
@@ -482,7 +482,7 @@ export default function CartScreen() {
                       Please ask the cashier to verify your payment.
                     </Text>
                   </View>
-  
+
                   <View style={styles.inputContainer}>
                     <Ionicons
                       name="person-outline"
@@ -498,7 +498,7 @@ export default function CartScreen() {
                       onChangeText={setCashierId}
                     />
                   </View>
-  
+
                   <View style={styles.inputContainer}>
                     <Ionicons
                       name="call-outline"
@@ -516,7 +516,7 @@ export default function CartScreen() {
                       maxLength={10}
                     />
                   </View>
-  
+
                   {cashierName && (
                     <View style={styles.cashierNameContainer}>
                       <View style={styles.verifiedIconBg}>
@@ -527,7 +527,7 @@ export default function CartScreen() {
                       </Text>
                     </View>
                   )}
-  
+
                   <TouchableOpacity
                     style={[
                       styles.verifyButton,
@@ -544,7 +544,7 @@ export default function CartScreen() {
                       style={{ marginLeft: 8 }}
                     />
                   </TouchableOpacity>
-  
+
                   <TouchableOpacity
                     style={styles.cancelButton}
                     onPress={() => setCashierModalVisible(false)}
@@ -559,11 +559,11 @@ export default function CartScreen() {
       </KeyboardAvoidingView>
     </Modal>
   );
-  
+
 
   return (
     <>
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Cart</Text>
           <View style={styles.itemsBadge}>
@@ -594,7 +594,7 @@ export default function CartScreen() {
             </View>
           </>
         )}
-      </SafeAreaView>
+      </View>
       {renderPaymentModal()}
       {renderCashierModal()}
     </>

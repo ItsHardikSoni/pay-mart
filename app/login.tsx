@@ -3,19 +3,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Colors } from '../constants/theme';
-import { supabase } from '../supabaseClient';
 import { useSession } from '../context/SessionProvider';
+import { supabase } from '../supabaseClient';
 
 export default function LoginScreen() {
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -102,80 +101,80 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-                <Ionicons name="storefront-outline" size={80} color={Colors.light.primary} />
-                <Text style={styles.title}>Welcome Back!</Text>
-                <Text style={styles.subtitle}>Sign in to your Pay Mart account</Text>
+          <View style={styles.header}>
+            <Ionicons name="storefront-outline" size={80} color={Colors.light.primary} />
+            <Text style={styles.title}>Welcome Back!</Text>
+            <Text style={styles.subtitle}>Sign in to your Pay Mart account</Text>
+          </View>
+
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Ionicons name="person-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Username, Email, or Phone"
+                value={loginIdentifier}
+                onChangeText={setLoginIdentifier}
+                autoCapitalize="none"
+                placeholderTextColor={Colors.light.icon}
+              />
             </View>
+            {!!identifierError && <Text style={styles.errorText}>{identifierError}</Text>}
 
-            <View style={styles.formContainer}>
-              <View style={styles.inputGroup}>
-                <Ionicons name="person-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Username, Email, or Phone"
-                  value={loginIdentifier}
-                  onChangeText={setLoginIdentifier}
-                  autoCapitalize="none"
-                  placeholderTextColor={Colors.light.icon}
-                />
-              </View>
-              {!!identifierError && <Text style={styles.errorText}>{identifierError}</Text>}
-
-              <View style={styles.inputGroup}>
-                <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  placeholderTextColor={Colors.light.icon}
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
-                </TouchableOpacity>
-              </View>
-              {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
-              
-              <Link href="/forgot-password" asChild>
-                <TouchableOpacity style={styles.forgotPasswordButton}>
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              </Link>
-
-              <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
-                <Text style={styles.signInButtonText}>Login</Text>
-              </TouchableOpacity>
-              
-              <Link href="/admin-login" asChild>
-                <TouchableOpacity style={styles.adminButton}>
-                  <Text style={styles.adminButtonText}>Admin Panel</Text>
-                </TouchableOpacity>
-              </Link>
-
-              <Text style={styles.orText}>or continue with</Text>
-
-              <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
-                <FontAwesome name="google" size={20} color="#DB4437" />
-                <Text style={styles.googleButtonText}>Sign In with Google</Text>
+            <View style={styles.inputGroup}>
+              <Ionicons name="lock-closed-outline" size={22} color={Colors.light.icon} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholderTextColor={Colors.light.icon}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
               </TouchableOpacity>
             </View>
-            
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <Link href="/signup" asChild>
-                  <TouchableOpacity>
-                    <Text style={styles.signUpLink}>Sign up</Text>
-                  </TouchableOpacity>
-              </Link>
-            </View>
+            {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+
+            <Link href="/forgot-password" asChild>
+              <TouchableOpacity style={styles.forgotPasswordButton}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </Link>
+
+            <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+              <Text style={styles.signInButtonText}>Login</Text>
+            </TouchableOpacity>
+
+            <Link href="/admin-login" asChild>
+              <TouchableOpacity style={styles.adminButton}>
+                <Text style={styles.adminButtonText}>Admin Panel</Text>
+              </TouchableOpacity>
+            </Link>
+
+            <Text style={styles.orText}>or continue with</Text>
+
+            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
+              <FontAwesome name="google" size={20} color="#DB4437" />
+              <Text style={styles.googleButtonText}>Sign In with Google</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Link href="/signup" asChild>
+              <TouchableOpacity>
+                <Text style={styles.signUpLink}>Sign up</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
         </ScrollView>
 
         {!!toastMessage && (
@@ -184,7 +183,7 @@ export default function LoginScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -244,7 +243,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   eyeIcon: {
-      padding: 8,
+    padding: 8,
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',
@@ -282,10 +281,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   orText: {
-      textAlign: 'center',
-      marginVertical: 24,
-      color: Colors.light.icon,
-      fontSize: 14,
+    textAlign: 'center',
+    marginVertical: 24,
+    color: Colors.light.icon,
+    fontSize: 14,
   },
   googleButton: {
     backgroundColor: '#fff',
@@ -304,14 +303,14 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   footer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: 30,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30,
   },
   footerText: {
-      fontSize: 14,
-      color: Colors.light.icon,
+    fontSize: 14,
+    color: Colors.light.icon,
   },
   signUpLink: {
     fontSize: 14,

@@ -1,13 +1,13 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Platform, Alert } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Colors } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useSession } from '../context/SessionProvider';
-import { supabase } from '../supabaseClient';
 import * as Print from 'expo-print';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import LottieView from 'lottie-react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Colors } from '../constants/theme';
+import { useSession } from '../context/SessionProvider';
+import { supabase } from '../supabaseClient';
 
 const EInvoiceScreen = () => {
   const { cart, total, paymentMode, cashierName, razorpayPaymentId, orderNumber, order_date, order_time } = useLocalSearchParams();
@@ -33,13 +33,13 @@ const EInvoiceScreen = () => {
 
   useEffect(() => {
     if (order_date && order_time) {
-        const orderDateTime = new Date(`${order_date}T${order_time}`);
-        setInvoiceDate(orderDateTime.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
-        setInvoiceTime(orderDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }));
+      const orderDateTime = new Date(`${order_date}T${order_time}`);
+      setInvoiceDate(orderDateTime.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+      setInvoiceTime(orderDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }));
     } else {
-        const now = new Date();
-        setInvoiceDate(now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
-        setInvoiceTime(now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }));
+      const now = new Date();
+      setInvoiceDate(now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+      setInvoiceTime(now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }));
     }
 
     const fetchData = async () => {
@@ -156,7 +156,7 @@ const EInvoiceScreen = () => {
     }
   };
 
-  const InfoRow = ({ label, value }: { label: string, value: string | string[] | undefined}) => (
+  const InfoRow = ({ label, value }: { label: string, value: string | string[] | undefined }) => (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
@@ -164,7 +164,7 @@ const EInvoiceScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {isAnimating && (
         <View style={styles.invoiceAnimation} pointerEvents="none">
           <LottieView
@@ -258,7 +258,7 @@ const EInvoiceScreen = () => {
           <Text style={styles.doneButtonText}>Done</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -1,18 +1,17 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  Alert
+  View
 } from 'react-native';
 import { Colors } from '../constants/theme';
 import { supabase } from '../supabaseClient';
@@ -62,8 +61,8 @@ export default function ForgotPasswordScreen() {
       setEmailError('Email is required');
       valid = false;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-        setEmailError('Invalid email address');
-        valid = false;
+      setEmailError('Invalid email address');
+      valid = false;
     }
     if (!phoneNumber) {
       setPhoneNumberError('Phone number is required');
@@ -145,7 +144,7 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -233,7 +232,7 @@ export default function ForgotPasswordScreen() {
                     secureTextEntry={!showConfirmPassword}
                     placeholderTextColor={Colors.light.icon}
                   />
-                   <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
                     <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={Colors.light.icon} />
                   </TouchableOpacity>
                 </View>
@@ -245,7 +244,7 @@ export default function ForgotPasswordScreen() {
               </>
             )}
           </View>
-          
+
           <View style={styles.footer}>
             <Text style={styles.footerText}>Remembered your password? </Text>
             <TouchableOpacity onPress={() => router.back()}>
@@ -260,119 +259,119 @@ export default function ForgotPasswordScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: '#f8f9fa',
-    },
-    container: {
-      flex: 1,
-    },
-    scrollContainer: {
-      flexGrow: 1,
-      justifyContent: 'center',
-      padding: 24,
-    },
-    header: {
-      alignItems: 'center',
-      marginBottom: 40,
-    },
-    title: {
-      fontSize: 32,
-      fontWeight: 'bold',
-      color: Colors.light.primary,
-      marginTop: 20,
-    },
-    subtitle: {
-      fontSize: 16,
-      color: Colors.light.icon,
-      marginTop: 8,
-      textAlign: 'center',
-    },
-    formContainer: {
-      width: '100%',
-    },
-    inputGroup: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#fff',
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      marginTop: 16,
-      borderWidth: 1,
-      borderColor: '#ddd',
-    },
-    inputIcon: {
-      marginRight: 12,
-    },
-    input: {
-      flex: 1,
-      height: 55,
-      fontSize: 16,
-      color: Colors.light.text,
-    },
-    eyeIcon: {
-        padding: 8,
-    },
-    primaryButton: {
-      backgroundColor: Colors.light.primary,
-      borderRadius: 12,
-      paddingVertical: 18,
-      alignItems: 'center',
-      marginTop: 24,
-      shadowColor: Colors.light.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 6,
-    },
-    primaryButtonText: {
-      color: '#fff',
-      fontSize: 18,
-      fontWeight: 'bold',
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 30,
-    },
-    footerText: {
-        fontSize: 14,
-        color: Colors.light.icon,
-    },
-    linkText: {
-      fontSize: 14,
-      fontWeight: 'bold',
-      color: Colors.light.primary,
-    },
-    toast: {
-      position: 'absolute',
-      bottom: 20,
-      left: 20,
-      right: 20,
-      padding: 15,
-      borderRadius: 8,
-      zIndex: 10,
-    },
-    successToast: {
-      backgroundColor: '#4CAF50',
-    },
-    errorToast: {
-      backgroundColor: '#F44336',
-    },
-    toastText: {
-      color: 'white',
-      textAlign: 'center',
-    },
-    errorText: {
-      color: Colors.danger,
-      fontSize: 12,
-      marginTop: 4,
-      marginLeft: 12,
-    },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+    marginTop: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: Colors.light.icon,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  formContainer: {
+    width: '100%',
+  },
+  inputGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    height: 55,
+    fontSize: 16,
+    color: Colors.light.text,
+  },
+  eyeIcon: {
+    padding: 8,
+  },
+  primaryButton: {
+    backgroundColor: Colors.light.primary,
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 24,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30,
+  },
+  footerText: {
+    fontSize: 14,
+    color: Colors.light.icon,
+  },
+  linkText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  successToast: {
+    backgroundColor: '#4CAF50',
+  },
+  errorToast: {
+    backgroundColor: '#F44336',
+  },
+  toastText: {
+    color: 'white',
+    textAlign: 'center',
+  },
+  errorText: {
+    color: Colors.light.danger,
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 12,
+  },
 });
