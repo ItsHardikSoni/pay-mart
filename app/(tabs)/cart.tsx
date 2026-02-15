@@ -1,13 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, SafeAreaView, Modal, TouchableWithoutFeedback, TextInput, Alert, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { cartState, CartItem } from '../cartState';
 import { router, useFocusEffect } from 'expo-router';
-import { Colors } from '../../constants/theme';
-import { supabase } from '../../supabaseClient';
-import { useSession } from '../../context/SessionProvider';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import RazorpayCheckout from 'react-native-razorpay';
+import { Colors } from '../../constants/theme';
+import { useSession } from '../../context/SessionProvider';
+import { supabase } from '../../supabaseClient';
+import { CartItem, cartState } from '../cartState';
 
 export default function CartScreen() {
   const [cartItems, setCartItems] = useState(cartState.items);
@@ -391,14 +391,32 @@ export default function CartScreen() {
                 </View>
               ) : (
                 <>
-                  <Text style={styles.modalTitle}>Select Payment Method</Text>
-                  <TouchableOpacity style={styles.paymentOption} onPress={handleRazorpayPayment}>
-                    <Ionicons name="card-outline" size={24} color="white" style={styles.paymentOptionIcon} />
-                    <Text style={styles.paymentOptionText}>Online Payment</Text>
+                  <Text style={styles.modalTitle}>Choose Payment Method</Text>
+                  
+                  <TouchableOpacity style={styles.paymentOptionCard} onPress={handleRazorpayPayment}>
+                    <View style={[styles.iconContainer, { backgroundColor: '#e3f2fd' }]}>
+                        <Ionicons name="card" size={24} color={Colors.light.primary} />
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionTitle}>Online Payment</Text>
+                        <Text style={styles.optionSubtitle}>UPI, Cards, Netbanking</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#999" />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.paymentOption} onPress={handleCashPayment}>
-                    <Ionicons name="cash-outline" size={24} color="white" style={styles.paymentOptionIcon} />
-                    <Text style={styles.paymentOptionText}>Cash Payment</Text>
+
+                  <TouchableOpacity style={styles.paymentOptionCard} onPress={handleCashPayment}>
+                    <View style={[styles.iconContainer, { backgroundColor: '#e8f5e9' }]}>
+                        <Ionicons name="cash" size={24} color="#2e7d32" />
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionTitle}>Cash Payment</Text>
+                        <Text style={styles.optionSubtitle}>Pay at the counter</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#999" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.cancelButton} onPress={() => setPaymentModalVisible(false)}>
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -419,17 +437,51 @@ export default function CartScreen() {
                 <View style={styles.modalOverlay}>
                     <TouchableWithoutFeedback>
                         <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Cashier Verification</Text>
-                            <TextInput style={styles.input} placeholder="Cashier ID" value={cashierId} onChangeText={setCashierId} />
-                            <TextInput style={styles.input} placeholder="Phone Number" value={cashierPhone} onChangeText={setCashierPhone} keyboardType="phone-pad" maxLength={10} />
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Cashier Verification</Text>
+                                <Text style={styles.modalSubtitle}>Please ask the cashier to verify your payment.</Text>
+                            </View>
+
+                            <View style={styles.inputContainer}>
+                                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
+                                <TextInput 
+                                    style={styles.inputField} 
+                                    placeholder="Cashier ID" 
+                                    placeholderTextColor="#aaa"
+                                    value={cashierId} 
+                                    onChangeText={setCashierId} 
+                                />
+                            </View>
+
+                            <View style={styles.inputContainer}>
+                                <Ionicons name="call-outline" size={20} color="#888" style={styles.inputIcon} />
+                                <TextInput 
+                                    style={styles.inputField} 
+                                    placeholder="Phone Number" 
+                                    placeholderTextColor="#aaa"
+                                    value={cashierPhone} 
+                                    onChangeText={setCashierPhone} 
+                                    keyboardType="phone-pad" 
+                                    maxLength={10} 
+                                />
+                            </View>
+
                             {cashierName && (
                                 <View style={styles.cashierNameContainer}>
-                                    <Ionicons name="checkmark-circle" size={20} color="green" />
-                                    <Text style={styles.cashierNameText}>{cashierName}</Text>
+                                    <View style={styles.verifiedIconBg}>
+                                        <Ionicons name="checkmark" size={16} color="white" />
+                                    </View>
+                                    <Text style={styles.cashierNameText}>Verified: {cashierName}</Text>
                                 </View>
                             )}
+                            
                             <TouchableOpacity style={[styles.verifyButton, !cashierName && styles.disabledVerifyButton]} onPress={handleCashierVerification} disabled={!cashierName}>
-                                <Text style={styles.checkoutButtonText}>Verify & Proceed</Text>
+                                <Text style={styles.verifyButtonText}>Verify & Proceed</Text>
+                                <Ionicons name="arrow-forward" size={20} color="white" style={{ marginLeft: 8 }} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.cancelButton} onPress={() => setCashierModalVisible(false)}>
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
                         </View>
                     </TouchableWithoutFeedback>
@@ -509,14 +561,130 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: { backgroundColor: 'white', padding: 22, borderTopLeftRadius: 20, borderTopRightRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 20 },
   modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 25, textAlign: 'center', color: '#333' },
-  paymentOption: { backgroundColor: Colors.light.primary, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  paymentOptionIcon: { marginRight: 15 },
-  paymentOptionText: { color: 'white', fontSize: 18, fontWeight: '600' },
-  input: { height: 50, borderColor: '#ddd', borderWidth: 1, borderRadius: 10, paddingHorizontal: 15, marginBottom: 15, fontSize: 16 },
-  verifyButton: { backgroundColor: Colors.light.primary, padding: 15, borderRadius: 10, alignItems: 'center' },
-  disabledVerifyButton: { backgroundColor: '#A9A9A9' },
-  cashierNameContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
-  cashierNameText: { marginLeft: 10, fontSize: 16, color: 'green', fontWeight: 'bold' },
+  paymentOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  optionSubtitle: {
+    fontSize: 13,
+    color: '#888',
+    fontWeight: '500',
+  },
+  cancelButton: {
+    marginTop: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    width: '100%',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: -20,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+    marginBottom: 16,
+    paddingHorizontal: 12,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  inputField: {
+    flex: 1,
+    height: 50,
+    fontSize: 16,
+    color: '#333',
+  },
+  verifyButton: {
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  verifyButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  disabledVerifyButton: {
+    backgroundColor: '#ccc',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  cashierNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f5e9',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  verifiedIconBg: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#2e7d32',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  cashierNameText: {
+    fontSize: 16,
+    color: '#2e7d32',
+    fontWeight: '600',
+  },
   processingContainer: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
   processingText: { marginTop: 15, fontSize: 16, fontWeight: '500', color: '#555' },
 });
