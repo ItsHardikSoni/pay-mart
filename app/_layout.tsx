@@ -16,7 +16,7 @@ import { SessionProvider } from '../context/SessionProvider';
 import SplashScreen from './splash';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: '(tabs)',
 };
 
 export default function RootLayout() {

@@ -95,7 +95,7 @@ export default function AccountScreen() {
     setRefreshing(true);
     fetchProfile(true);
   }, [fetchProfile]);
-  
+
   const openEditModal = () => {
     setTempName(name);
     setTempUsername(username);
@@ -145,7 +145,7 @@ export default function AccountScreen() {
         router.replace('/login');
         return;
       }
-      
+
       if (tempUsername !== username) {
         const { count, error: usernameError } = await supabase.from('users').select('id', { count: 'exact', head: true }).eq('username', tempUsername);
         if (usernameError) console.error('Error checking username uniqueness:', usernameError);
@@ -213,6 +213,27 @@ export default function AccountScreen() {
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          }
+        }
+      ]
+    );
+  };
+
   const InfoRow = ({ icon, label, value }: { icon: keyof typeof Ionicons['glyphMap'], label: string, value: string }) => (
     <View style={styles.infoRow}>
       <Ionicons name={icon} size={20} color={Colors.light.primary} style={styles.infoIcon} />
@@ -233,7 +254,7 @@ export default function AccountScreen() {
 
   return (
     <View style={[styles.safeArea,]}>
-        <ScrollView 
+        <ScrollView
           style={styles.container}
           contentContainerStyle={{ paddingBottom: insets.bottom }}
           showsVerticalScrollIndicator={false}
@@ -257,7 +278,7 @@ export default function AccountScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Options</Text>
             <View style={styles.card}>
@@ -287,21 +308,18 @@ export default function AccountScreen() {
 
           <TouchableOpacity
             style={styles.logoutButton}
-            onPress={async () => {
-              await logout();
-              router.replace('/login');
-            }}
+            onPress={handleLogout}
           >
             <Ionicons name="log-out-outline" size={24} color='#FFF' />
             <Text style={styles.logoutButtonText}>Logout</Text>
           </TouchableOpacity>
         </ScrollView>
         <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(!modalVisible)}
-      >
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(!modalVisible)}
+        >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
@@ -510,6 +528,7 @@ const styles = StyleSheet.create({
     color: Colors.light.danger,
     fontSize: 12,
     marginTop: 4,
+    textAlign: 'center',
   },
   saveButton: {
     backgroundColor: Colors.light.primary,
