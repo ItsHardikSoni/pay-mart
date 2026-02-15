@@ -1,4 +1,3 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -461,7 +460,7 @@ export default function CartScreen() {
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <TouchableWithoutFeedback onPress={() => setCashierModalVisible(false)}>
           <View style={styles.modalOverlay}>
@@ -495,6 +494,7 @@ export default function CartScreen() {
                       placeholder="Cashier ID"
                       placeholderTextColor="#aaa"
                       value={cashierId}
+                      autoCapitalize="none"
                       onChangeText={setCashierId}
                     />
                   </View>

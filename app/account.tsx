@@ -1,4 +1,3 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
@@ -257,7 +256,7 @@ export default function AccountScreen() {
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          paddingBottom: insets.bottom + 24, // 👈 KEY FIX
+          paddingBottom: insets.bottom + 24,
         }}
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -317,13 +316,18 @@ export default function AccountScreen() {
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
-      <Modal animationType="slide" transparent visible={modalVisible}>
+      <Modal
+        animationType="slide"
+        transparent
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
-            <View style={styles.modalInnerContainer}>
+            <View style={styles.modalOverlay}>
               <TouchableWithoutFeedback>
                 <View style={styles.modalView}>
                   <View style={styles.modalHeader}>
@@ -497,10 +501,6 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalInnerContainer: {
-    flex: 1,
     justifyContent: 'flex-end',
   },
   modalView: {

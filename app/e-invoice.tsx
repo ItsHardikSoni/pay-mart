@@ -1,3 +1,4 @@
+
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -10,7 +11,7 @@ import { useSession } from '../context/SessionProvider';
 import { supabase } from '../supabaseClient';
 
 const EInvoiceScreen = () => {
-  const { cart, total, paymentMode, cashierName, razorpayPaymentId, orderNumber, order_date, order_time } = useLocalSearchParams();
+  const { cart, paymentMode, cashierName, razorpayPaymentId, orderNumber, order_date, order_time } = useLocalSearchParams();
   const { username } = useSession();
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerFullName, setCustomerFullName] = useState('');
@@ -28,6 +29,18 @@ const EInvoiceScreen = () => {
       return [];
     }
   }, [cart]);
+
+  const totalItems = useMemo(() => {
+    return cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  }, [cartItems]);
+
+  const { subTotal, cgst, sgst, grandTotal } = useMemo(() => {
+    const sub = cartItems.reduce((sum: number, item: any) => sum + (item.mrp * item.quantity), 0);
+    const cgstVal = sub * 0.025;
+    const sgstVal = sub * 0.025;
+    const grand = sub + cgstVal + sgstVal;
+    return { subTotal: sub, cgst: cgstVal, sgst: sgstVal, grandTotal: grand };
+  }, [cartItems]);
 
   const invoiceRef = useRef(null);
 
@@ -65,8 +78,8 @@ const EInvoiceScreen = () => {
     const itemsHtml = cartItems.map((item: any) => `
         <tr>
             <td>${item.name}</td>
-            <td>₹${item.mrp.toFixed(2)}</td>
-            <td>${item.quantity}</td>
+            <td class="center">₹${item.mrp.toFixed(2)}</td>
+            <td class="center">${item.quantity}</td>
             <td class="amount">₹${(item.mrp * item.quantity).toFixed(2)}</td>
         </tr>
     `).join('');
@@ -98,8 +111,12 @@ const EInvoiceScreen = () => {
                 .items-table table { width: 100%; border-collapse: collapse; }
                 .items-table table th, .items-table table td { border: 1px solid #ddd; padding: 8px; }
                 .items-table table th { background-color: #f2f2f2; text-align: left; }
-                .total { text-align: right; margin-top: 20px; font-size: 18px; font-weight: bold; color: ${Colors.light.primary}; }
                 .amount { text-align: right; }
+                .center { text-align: center; }
+                .total-section { width: 100%; margin-top: 20px; }
+                .total-section table { width: 50%; margin-left: auto; border-collapse: collapse; text-align: right; }
+                .total-section td { padding: 5px 0; }
+                .total-section tr.grand-total td { font-size: 18px; font-weight: bold; color: ${Colors.light.primary}; border-top: 2px solid #eee; padding-top: 10px; }
                 .terms-section { margin-top: 20px; font-size: 12px; color: #777; }
                 .greeting { text-align: center; margin-top: 20px; font-size: 16px; font-weight: bold; color: ${Colors.light.primary}; }
             </style>
@@ -115,18 +132,26 @@ const EInvoiceScreen = () => {
                     <table>
                         <tr><td><strong>Billed To:</strong> ${customerFullName || username}</td><td><strong>Bill No:</strong> ${orderNumber}</td></tr>
                         <tr><td><strong>Phone:</strong> ${customerPhone}</td><td><strong>Date:</strong> ${invoiceDate}</td></tr>
-                        <tr><td><strong>Payment:</strong> ${paymentMode}</td><td><strong>Time:</strong> ${invoiceTime}</td></tr>
+                        <tr><td><strong>Total Items:</strong> ${totalItems}</td><td><strong>Time:</strong> ${invoiceTime}</td></tr>
+                        <tr><td><strong>Payment:</strong> ${paymentMode}</td><td></td></tr>
                         ${paymentMode === 'Cash' && cashierName ? `<tr><td><strong>Cashier:</strong> ${cashierName}</td><td></td></tr>` : ''}
                         ${paymentMode === 'Online' && razorpayPaymentId ? `<tr><td><strong>Payment ID:</strong> ${razorpayPaymentId}</td><td></td></tr>` : ''}
                     </table>
                 </div>
                 <div class="items-table">
                     <table>
-                        <thead><tr><th>Product</th><th>MRP</th><th>Qty</th><th class="amount">Amount</th></tr></thead>
+                        <thead><tr><th>Product</th><th class="center">MRP</th><th class="center">Qty</th><th class="amount">AMT</th></tr></thead>
                         <tbody>${itemsHtml}</tbody>
                     </table>
                 </div>
-                <div class="total">Grand Total: ₹${parseFloat(total as string).toFixed(2)}</div>
+                <div class="total-section">
+                    <table>
+                        <tr><td>Subtotal:</td><td class="amount">₹${subTotal.toFixed(2)}</td></tr>
+                        <tr><td>CGST (2.5%):</td><td class="amount">₹${cgst.toFixed(2)}</td></tr>
+                        <tr><td>SGST (2.5%):</td><td class="amount">₹${sgst.toFixed(2)}</td></tr>
+                        <tr class="grand-total"><td>Grand Total:</td><td class="amount">₹${grandTotal.toFixed(2)}</td></tr>
+                    </table>
+                </div>
                 ${termsAndConditions}
                 ${greeting}
             </div>
@@ -204,6 +229,7 @@ const EInvoiceScreen = () => {
 
           <View style={styles.invoiceMeta}>
             <InfoRow label="Bill Number:" value={orderNumber} />
+            <InfoRow label="Total Items:" value={`${totalItems}`} />
             <InfoRow label="Date:" value={invoiceDate} />
             <InfoRow label="Time:" value={invoiceTime} />
             <InfoRow label="Payment Mode:" value={paymentMode as string || 'N/A'} />
@@ -216,26 +242,30 @@ const EInvoiceScreen = () => {
           <View style={styles.itemsSection}>
             <Text style={styles.sectionTitle}>Order Summary</Text>
             <View style={styles.itemsHeader}>
-              <Text style={[styles.itemsHeaderText, { flex: 3 }]}>Product</Text>
-              <Text style={styles.itemsHeaderText}>MRP</Text>
-              <Text style={styles.itemsHeaderText}>Qty</Text>
-              <Text style={[styles.itemsHeaderText, { textAlign: 'right' }]}>Amount</Text>
+              <Text style={[styles.itemsHeaderText, { flex: 3, textAlign: 'left' }]}>Product</Text>
+              <Text style={[styles.itemsHeaderText, { textAlign: 'center' }]}>MRP</Text>
+              <Text style={[styles.itemsHeaderText, { textAlign: 'center' }]}>Qty</Text>
+              <Text style={[styles.itemsHeaderText, { textAlign: 'right' }]}>AMT</Text>
             </View>
             {cartItems.map((item: any, index: number) => (
               <View key={`${item.id}-${index}`} style={styles.itemRow}>
-                <Text style={[styles.itemText, { flex: 3 }]}>{item.name}</Text>
-                <Text style={styles.itemText}>₹{item.mrp.toFixed(2)}</Text>
-                <Text style={styles.itemText}>{item.quantity}</Text>
+                <Text style={[styles.itemText, { flex: 3, textAlign: 'left' }]}>{item.name}</Text>
+                <Text style={[styles.itemText, { textAlign: 'center' }]}>₹{item.mrp.toFixed(2)}</Text>
+                <Text style={[styles.itemText, { textAlign: 'center' }]}>{item.quantity}</Text>
                 <Text style={[styles.itemText, { textAlign: 'right' }]}>₹{(item.mrp * item.quantity).toFixed(2)}</Text>
               </View>
             ))}
           </View>
-
-          <View style={styles.separator} />
+          
+          <View style={styles.totalBreakdown}>
+            <InfoRow label="Subtotal" value={`₹${subTotal.toFixed(2)}`} />
+            <InfoRow label="CGST (2.5%)" value={`₹${cgst.toFixed(2)}`} />
+            <InfoRow label="SGST (2.5%)" value={`₹${sgst.toFixed(2)}`} />
+          </View>
 
           <View style={styles.totalContainer}>
             <Text style={styles.totalLabel}>Grand Total</Text>
-            <Text style={styles.totalAmount}>₹{parseFloat(total as string).toFixed(2)}</Text>
+            <Text style={styles.totalAmount}>₹{grandTotal.toFixed(2)}</Text>
           </View>
 
           <View style={styles.termsSection}>
@@ -382,6 +412,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#555',
+  },
+  totalBreakdown: {
+      marginTop: 15,
   },
   totalContainer: {
     flexDirection: 'row',
