@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import RazorpayCheckout from 'react-native-razorpay';
 import { Colors } from '../../constants/theme';
 import { useSession } from '../../context/SessionProvider';
@@ -282,7 +282,7 @@ export default function CartScreen() {
 
         const options = {
             description: 'Your order from PayMart Supermarket',
-            image: 'https://i.imgur.com/3g7nmJC.png',
+            image: Image.resolveAssetSource(require('../../assets/images/app.icon.jpeg')).uri,
             currency: 'INR',
             key: 'rzp_live_SFgkbtmRPxIgyq',
             amount: parseFloat(finalTotal) * 100,

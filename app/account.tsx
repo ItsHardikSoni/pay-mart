@@ -70,10 +70,10 @@ export default function AccountScreen() {
       setEmail(data.email ?? '');
 
     } catch (e) {
-        console.error('An unexpected error occurred in fetchProfile:', e);
-        Alert.alert('Error', 'An unexpected error occurred. Please login again.');
-        await logout();
-        router.replace('/login');
+      console.error('An unexpected error occurred in fetchProfile:', e);
+      Alert.alert('Error', 'An unexpected error occurred. Please login again.');
+      await logout();
+      router.replace('/login');
     } finally {
       if (!isRefreshing) {
         setLoading(false);
@@ -246,7 +246,7 @@ export default function AccountScreen() {
 
   if (loading && !refreshing) {
     return (
-      <View style={[styles.safeArea, styles.loader, {paddingTop: insets.top}]}>
+      <View style={[styles.safeArea, styles.loader, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={Colors.light.primary} />
       </View>
     );
@@ -254,74 +254,72 @@ export default function AccountScreen() {
 
   return (
     <View style={[styles.safeArea,]}>
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={{ paddingBottom: insets.bottom }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.light.primary]} />}
-        >
-          <View style={styles.header}>
-            <Text style={styles.userName}>{name}</Text>
-            <Text style={styles.userHandle}>@{username}</Text>
-          </View>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 24, // 👈 KEY FIX
+        }}
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.light.primary]} />}
+      >
+        <View style={styles.header}>
+          <Text style={styles.userName}>{name}</Text>
+          <Text style={styles.userHandle}>@{username}</Text>
+        </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile Details</Text>
-            <View style={styles.card}>
-              <InfoRow icon="person-outline" label="Name" value={name} />
-              <InfoRow icon="at-outline" label="Username" value={username} />
-              <InfoRow icon="call-outline" label="Phone" value={phone} />
-              <InfoRow icon="mail-outline" label="Email" value={email} />
-              <TouchableOpacity style={styles.editButton} onPress={openEditModal}>
-                <Ionicons name="create-outline" size={20} color={Colors.light.primary} />
-                <Text style={styles.editButtonText}>Edit Profile</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Profile Details</Text>
+          <View style={styles.card}>
+            <InfoRow icon="person-outline" label="Name" value={name} />
+            <InfoRow icon="at-outline" label="Username" value={username} />
+            <InfoRow icon="call-outline" label="Phone" value={phone} />
+            <InfoRow icon="mail-outline" label="Email" value={email} />
+            <TouchableOpacity style={styles.editButton} onPress={openEditModal}>
+              <Ionicons name="create-outline" size={20} color={Colors.light.primary} />
+              <Text style={styles.editButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Options</Text>
+          <View style={styles.card}>
+            <Link href="/order-history" asChild>
+              <TouchableOpacity style={styles.optionButton}>
+                <Ionicons name="reader-outline" size={24} color={Colors.light.primary} />
+                <Text style={styles.optionText}>Order History</Text>
+                <Ionicons name="chevron-forward" size={24} color="#ccc" />
               </TouchableOpacity>
-            </View>
+            </Link>
+            <Link href="/refer-and-earn" asChild>
+              <TouchableOpacity style={styles.optionButton}>
+                <Ionicons name="share-social-outline" size={24} color={Colors.light.primary} />
+                <Text style={styles.optionText}>Refer & Earn</Text>
+                <Ionicons name="chevron-forward" size={24} color="#ccc" />
+              </TouchableOpacity>
+            </Link>
+            <Link href="/help-and-support" asChild>
+              <TouchableOpacity style={styles.optionButton}>
+                <Ionicons name="help-circle-outline" size={24} color={Colors.light.primary} />
+                <Text style={styles.optionText}>Help & Support</Text>
+                <Ionicons name="chevron-forward" size={24} color="#ccc" />
+              </TouchableOpacity>
+            </Link>
           </View>
+        </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Options</Text>
-            <View style={styles.card}>
-              <Link href="/order-history" asChild>
-                <TouchableOpacity style={styles.optionButton}>
-                  <Ionicons name="reader-outline" size={24} color={Colors.light.primary} />
-                  <Text style={styles.optionText}>Order History</Text>
-                  <Ionicons name="chevron-forward" size={24} color="#ccc" />
-                </TouchableOpacity>
-              </Link>
-              <Link href="/refer-and-earn" asChild>
-                <TouchableOpacity style={styles.optionButton}>
-                  <Ionicons name="share-social-outline" size={24} color={Colors.light.primary} />
-                  <Text style={styles.optionText}>Refer & Earn</Text>
-                  <Ionicons name="chevron-forward" size={24} color="#ccc" />
-                </TouchableOpacity>
-              </Link>
-              <Link href="/help-and-support" asChild>
-                <TouchableOpacity style={styles.optionButton}>
-                  <Ionicons name="help-circle-outline" size={24} color={Colors.light.primary} />
-                  <Text style={styles.optionText}>Help & Support</Text>
-                  <Ionicons name="chevron-forward" size={24} color="#ccc" />
-                </TouchableOpacity>
-              </Link>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out-outline" size={24} color='#FFF' />
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
-        </ScrollView>
-        <Modal
-            animationType="slide"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={() => setModalVisible(!modalVisible)}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
         >
+          <Ionicons name="log-out-outline" size={24} color='#FFF' />
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      <Modal animationType="slide" transparent visible={modalVisible}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalOverlay}
         >
           <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
@@ -334,33 +332,36 @@ export default function AccountScreen() {
                       <Ionicons name="close-circle" size={28} color="#ccc" />
                     </TouchableOpacity>
                   </View>
-                  <ScrollView>
-                    <Text style={styles.inputLabel}>Name<Text style={styles.required}>*</Text></Text>
-                    <TextInput style={styles.input} onChangeText={setTempName} value={tempName} placeholder="Enter your name" />
-                    {!!nameError && <Text style={styles.errorText}>{nameError}</Text>}
 
-                    <Text style={styles.inputLabel}>Username<Text style={styles.required}>*</Text></Text>
-                    <TextInput style={styles.input} onChangeText={setTempUsername} value={tempUsername} placeholder="Enter your username" autoCapitalize="none" />
-                    {!!usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
+                  <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={{
+                      paddingBottom: insets.bottom + 24,
+                    }}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {/* inputs */}
 
-                    <Text style={styles.inputLabel}>Phone<Text style={styles.required}>*</Text></Text>
-                    <TextInput style={styles.input} onChangeText={setTempPhone} value={tempPhone} placeholder="Enter your phone" keyboardType="phone-pad" />
-                    {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
-
-                    <Text style={styles.inputLabel}>Email<Text style={styles.required}>*</Text></Text>
-                    <TextInput style={styles.input} onChangeText={setTempEmail} value={tempEmail} placeholder="Enter your email" keyboardType="email-address" />
-                    {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
-
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-                      {saving ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
+                    <TouchableOpacity
+                      style={styles.saveButton}
+                      onPress={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <Text style={styles.saveButtonText}>Save Changes</Text>
+                      )}
                     </TouchableOpacity>
                   </ScrollView>
+
                 </View>
               </TouchableWithoutFeedback>
             </View>
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </Modal>
+
     </View>
   );
 }
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    paddingBottom: 30,
+    paddingBottom: 0,
     maxHeight: '80%',
   },
   modalHeader: {
