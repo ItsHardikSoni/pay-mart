@@ -96,10 +96,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    console.log('Signing in with Google...');
-  };
-
   return (
     <View style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -158,13 +154,6 @@ export default function LoginScreen() {
                 <Text style={styles.adminButtonText}>Admin Panel</Text>
               </TouchableOpacity>
             </Link>
-
-            <Text style={styles.orText}>or continue with</Text>
-
-            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
-              <FontAwesome name="google" size={20} color="#DB4437" />
-              <Text style={styles.googleButtonText}>Sign In with Google</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>

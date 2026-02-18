@@ -73,8 +73,8 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.promoBanner}>
-        <Text style={styles.promoText}>New! Try our Scan & Go service.</Text>
-        <Text style={styles.promoSubText}>Skip the checkout line and save time.</Text>
+        <Text style={styles.promoText}>New! Try our Scan & Pay service.</Text>
+        <Text style={styles.promoSubText}>Scan & Pay - Skip the Queue</Text>
       </View>
 
       <View style={styles.quickActionsContainer}>

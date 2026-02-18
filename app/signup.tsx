@@ -62,8 +62,9 @@ export default function SignupScreen() {
       valid = false;
     }
 
-    if (phoneNumber.length !== 10) {
-      setPhoneError('Phone number must be 10 digits');
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      setPhoneError('Phone number must be a 10-digit number starting with 6, 7, 8, or 9.');
       valid = false;
     }
 
@@ -74,7 +75,7 @@ export default function SignupScreen() {
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
-      setPasswordError('Password must contain at least 1 digit, 1 special character, 1 uppercase and 1 lowercase letter');
+      setPasswordError('Password must contain at least 1 digit, 1 special character, 1 uppercase, 1 lowercase letter and must be at least 8 characters long.');
       valid = false;
     }
 
@@ -145,10 +146,6 @@ export default function SignupScreen() {
     }
   };
 
-  const handleGoogleSignUp = () => {
-    // Handle Google sign-up logic here
-    console.log('Signing up with Google...');
-  };
 
   return (
     <View style={styles.safeArea}>
@@ -251,13 +248,6 @@ export default function SignupScreen() {
 
             <TouchableOpacity style={styles.signInButton} onPress={handleSignUp}>
               <Text style={styles.signInButtonText}>Sign Up</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.orText}>or continue with</Text>
-
-            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
-              <FontAwesome name="google" size={20} color="#DB4437" />
-              <Text style={styles.googleButtonText}>Sign Up with Google</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.footer}>

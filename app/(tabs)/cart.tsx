@@ -20,6 +20,7 @@ export default function CartScreen() {
   const { username } = useSession();
   const [userDetails, setUserDetails] = useState({ email: '', phone: '', name: '' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showGst, setShowGst] = useState(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -194,10 +195,14 @@ export default function CartScreen() {
   }
 
   const getTotal = () => {
-    return cartItems.reduce((total, item) => {
-      const itemPrice = (item as any).mrp ?? (item as any).price ?? 0;
-      return total + itemPrice * item.quantity;
-    }, 0).toFixed(2);
+    const subTotal = cartItems.reduce((total, item) => {
+        const itemPrice = (item as any).mrp ?? (item as any).price ?? 0;
+        return total + itemPrice * item.quantity;
+    }, 0);
+    const cgst = subTotal * 0.025;
+    const sgst = subTotal * 0.025;
+    const grandTotal = subTotal + cgst + sgst;
+    return { subTotal, cgst, sgst, grandTotal };
   };
 
   const getTotalQuantity = () => {
@@ -215,7 +220,7 @@ export default function CartScreen() {
 
   const processOrder = async (paymentMode: 'Cash' | 'Online', orderId: string, options: { razorpayPaymentId?: string; cashierName?: string | null; razorpaySignature?: string; }) => {
     try {
-      const finalTotal = getTotal();
+      const { grandTotal } = getTotal();
       const { razorpayPaymentId, cashierName, razorpaySignature } = options;
       const now = new Date();
       const order_date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -226,7 +231,7 @@ export default function CartScreen() {
       const { error: rpcError } = await supabase.rpc('process_new_order', {
         p_order_number: orderId,
         p_username: username,
-        p_total_amount: parseFloat(finalTotal),
+        p_total_amount: grandTotal,
         p_cart_items: processedCartItems,
         p_payment_mode: paymentMode,
         p_order_time: order_time,
@@ -250,7 +255,7 @@ export default function CartScreen() {
       cartState.items = [];
       setCartItems([]);
 
-      return { processedCartItems: itemsForInvoice, finalTotal };
+      return { processedCartItems: itemsForInvoice, finalTotal: grandTotal };
 
     } catch (e: any) {
       console.error('Transaction Error:', e);
@@ -269,11 +274,11 @@ export default function CartScreen() {
       return;
     }
 
-    const finalTotal = getTotal();
+    const { grandTotal } = getTotal();
 
     try {
       const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
-        body: { amount: parseFloat(finalTotal) },
+        body: { amount: grandTotal },
       });
 
       if (orderError) throw new Error(orderError.message);
@@ -283,10 +288,10 @@ export default function CartScreen() {
 
       const options = {
         description: 'Your order from PayMart Supermarket',
-        image: Image.resolveAssetSource(require('../../assets/images/app.icon.jpeg')).uri,
+        image: Image.resolveAssetSource(require('../../assets/images/app-icon-3.png')).uri,
         currency: 'INR',
         key: 'rzp_live_SFgkbtmRPxIgyq',
-        amount: parseFloat(finalTotal) * 100,
+        amount: grandTotal * 100,
         name: 'PayMart Supermarket',
         order_id: serverOrderId,
         prefill: {
@@ -586,8 +591,29 @@ export default function CartScreen() {
             <View style={styles.footer}>
               <View style={styles.totalRow}>
                 <Text style={styles.totalText}>Total ({getTotalQuantity()} items)</Text>
-                <Text style={styles.totalAmount}>₹{getTotal()}</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <Text style={styles.totalAmount}>₹{getTotal().grandTotal.toFixed(2)}</Text>
+                    <TouchableOpacity onPress={() => setShowGst(!showGst)} style={{marginLeft: 8}}>
+                        <Ionicons name={showGst ? "chevron-down" : "chevron-up"} size={21} color="black" />
+                    </TouchableOpacity>
+                </View>
               </View>
+              {showGst && (
+                <>
+                    <View style={styles.totalRow}>
+                        <Text style={styles.totalText}>Subtotal</Text>
+                        <Text style={styles.totalAmount}>₹{getTotal().subTotal.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.totalRow}>
+                        <Text style={styles.totalText}>CGST (2.5%)</Text>
+                        <Text style={styles.totalAmount}>₹{getTotal().cgst.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.totalRow}>
+                        <Text style={styles.totalText}>SGST (2.5%)</Text>
+                        <Text style={styles.totalAmount}>₹{getTotal().sgst.toFixed(2)}</Text>
+                    </View>
+                </>
+              )}
               <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
                 <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
               </TouchableOpacity>
@@ -624,8 +650,8 @@ const styles = StyleSheet.create({
   itemQuantity: { fontSize: 16, fontWeight: 'bold', marginHorizontal: 12, color: '#333' },
   footer: { backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.1, shadowRadius: 5, elevation: 10 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  totalText: { fontSize: 18, color: '#555', fontWeight: '500' },
-  totalAmount: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  totalText: { fontSize: 15, color: '#555', fontWeight: '500' },
+  totalAmount: { fontSize: 16, fontWeight: 'bold', color: '#333' },
   checkoutButton: { backgroundColor: Colors.light.primary, padding: 16, borderRadius: 12, alignItems: 'center' },
   checkoutButtonText: { color: 'white', fontSize: 15, fontWeight: 'bold' },
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
