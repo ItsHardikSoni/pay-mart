@@ -7,16 +7,18 @@
     "icon": "./assets/images/app-icon-3.png",
     "scheme": "paymart",
     "userInterfaceStyle": "automatic",
+    "tags": ["mobile payments", "secure payments", "scan and pay", "shopping", "rewards", "e-wallet", "in-store shopping", "digital cart", "contactless checkout", "UPI", "scan to pay", "retail", "Razorpay", "e-invoice", "digital invoice", "referral program", "rewards program", "order history", "past orders", "barcode scanner", "product scanner"],
+    "description": "Transform your shopping journey with Pay Mart, the ultimate in-store companion! Our app makes shopping faster, smarter, and more rewarding. Use our intuitive barcode scanner to instantly add products to your digital cart. Pay securely with Razorpay, accepting credit/debit cards and UPI, or pay at the counter. Receive a digital invoice (e-invoice) for every purchase and access your complete order history. Take advantage of our referral program to earn rewards. Download now for a fast, easy, and secure checkout experience!",
     "ios": {
       "supportsTablet": true,
       "jsEngine": "hermes",
       "infoPlist": {
+        "keywords": ["mobile payments", "secure payments", "scan and pay", "shopping", "rewards", "e-wallet", "in-store shopping", "digital cart", "contactless checkout", "UPI", "scan to pay", "retail", "Razorpay", "e-invoice", "digital invoice", "referral program", "rewards program", "order history", "past orders", "barcode scanner", "product scanner"],
         "NSCameraUsageDescription": "This app needs access to your camera to scan product barcodes.",
         "NSMicrophoneUsageDescription": "This app does not require microphone access, but this permission is requested by the camera module.",
         "NSLocationWhenInUseUsageDescription": "This app needs your location to verify that you are in the correct store for barcode scanning.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to verify that you are in the correct store for barcode scanning, even when the app is in the background.",
         "UIBackgroundModes": [
-          "location",
           "location"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -49,8 +51,7 @@
             "backgroundColor": "#000000"
           }
         }
-      ],
-      "@react-native-google-signin/google-signin"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
